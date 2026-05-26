@@ -1,5 +1,5 @@
-using System;
 using Microsoft.UI.Xaml;
+using System;
 
 namespace BlendHub.Models
 {
@@ -20,7 +20,7 @@ namespace BlendHub.Models
         public string ReleaseDate { get; set; } = string.Empty;
         public Visibility IsLatest { get; set; } = Visibility.Collapsed;
         public string InstallersCountText { get; set; } = string.Empty;
-        
+
         // Added for performance optimization (pre-calculated sorting)
         public Version ComparableVersion { get; set; } = new Version(0, 0);
         public DateTime ComparableDate { get; set; } = DateTime.MinValue;

@@ -1,0 +1,11 @@
+<ContentDialog
+    x:Class="BlendHub.Dialogs.DeleteFileDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Delete File?"
+    PrimaryButtonText="Delete"
+    CloseButtonText="Cancel"
+    DefaultButton="Close">
+    
+    <TextBlock x:Name="MessageTextBlock" TextWrapping="Wrap" />
+</ContentDialog>

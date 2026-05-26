@@ -1,276 +1,677 @@
-<Page
-    x:Class="BlendHub.Pages.ProjectDetailPage"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:local="using:BlendHub.Pages"
-    xmlns:models="using:BlendHub.Models"
-    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
-    xmlns:custom="using:BlendHub.Controls"
-    mc:Ignorable="d">
+<?xml version="1.0" encoding="UTF-8"?>
+<Page x:Class="BlendHub.Pages.ProjectDetailPage"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:local="using:BlendHub.Pages"
+	xmlns:custom="using:BlendHub.Controls"
+	mc:Ignorable="d">
+	<!-- ========================================
+     PAGE RESOURCES
+     ======================================== -->
+	<Page.Resources>
 
-    <Page.Resources>
-        <DataTemplate x:Key="NoteTemplate">
-            <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                    BorderThickness="1" CornerRadius="8" Padding="12,10">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="32" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    
-                    <FontIcon Grid.Column="0" Grid.RowSpan="2" Glyph="&#xF000;" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Left" Margin="4,0,0,0" VerticalAlignment="Center" />
-                    
-                    <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Content}" TextWrapping="Wrap" FontSize="14" VerticalAlignment="Center" Margin="0,0,0,4" />
-                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding CreatedAtString}" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
-                    
-                    <StackPanel Grid.Column="2" Grid.RowSpan="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                        <Button Click="EditItem_Click" Tag="{Binding}" Style="{StaticResource SubtleButtonStyle}" Padding="6">
-                            <FontIcon Glyph="&#xE70F;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </Button>
-                        <Button Click="DeleteItem_Click" Tag="{Binding}" Style="{StaticResource SubtleButtonStyle}" Padding="6">
-                            <FontIcon Glyph="&#xE74D;" FontSize="14" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </DataTemplate>
-        
-        <DataTemplate x:Key="TodoTemplate">
-            <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                    BorderThickness="1" CornerRadius="8" Padding="12,10">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="32" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <CheckBox Grid.Column="0" Grid.RowSpan="2" IsChecked="{Binding IsChecked, Mode=TwoWay}" Click="TodoCheckbox_Click" Tag="{Binding Id}" 
-                              HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Center" MinWidth="0" />
-                    <StackPanel Orientation="Horizontal" Grid.Column="1" Grid.Row="0" Spacing="8" Margin="0,0,0,4" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="14" VerticalAlignment="Center"
-                                   TextDecorations="{Binding TextDecoration}" Foreground="{Binding TextColorBrush}" />
-                        <Border Background="{Binding PriorityBackgroundColor}" CornerRadius="4" Padding="6,2" VerticalAlignment="Center" Visibility="{Binding PriorityVisibility}">
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <FontIcon Glyph="&#xE7C1;" FontSize="10" Foreground="{Binding PriorityIconColor}" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding PriorityText}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding PriorityTextColor}" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                    
-                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding CreatedAtString}" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
-                    
-                    <StackPanel Grid.Column="2" Grid.RowSpan="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                        <Button Click="EditItem_Click" Tag="{Binding}" Style="{StaticResource SubtleButtonStyle}" Padding="6">
-                            <FontIcon Glyph="&#xE70F;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </Button>
-                        <Button Click="DeleteItem_Click" Tag="{Binding}" Style="{StaticResource SubtleButtonStyle}" Padding="6">
-                            <FontIcon Glyph="&#xE74D;" FontSize="14" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </DataTemplate>
+		<!-- ========================================
+		     NOTE TEMPLATE
+		     Template for displaying note items with:
+		     - Document icon
+		     - Note title and description
+		     - Edit/Delete action buttons
+		     ======================================== -->
+		<DataTemplate x:Key="NoteTemplate">
+			<Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+				BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+				BorderThickness="1"
+				CornerRadius="8"
+				Width="320"
+				MinHeight="160"
+				Margin="0,0,16,16">
+				<Grid Padding="20">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="*" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+					</Grid.RowDefinitions>
+					
+					<!-- Heading -->
+					<TextBlock Text="{Binding Heading}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Margin="0,0,0,8" />
+					
+					<!-- Content -->
+					<TextBlock Grid.Row="1" Text="{Binding Content}" TextWrapping="Wrap" Margin="0,4,0,16" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Top" />
+					
+					<!-- Divider line -->
+					<Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="-20,0,-20,12" />
+					
+					<!-- Footer -->
+					<Grid Grid.Row="3" VerticalAlignment="Bottom">
+						<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+							<FontIcon Glyph="&#xE787;" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+							<TextBlock Text="{Binding CreatedAtString}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+						</StackPanel>
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+							<Button Style="{StaticResource SubtleButtonStyle}" Padding="6">
+								<FontIcon Glyph="&#xE712;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+								<Button.Flyout>
+									<MenuFlyout>
+										<MenuFlyoutItem Text="Edit" Icon="Edit" Click="EditItem_Click" Tag="{Binding}" />
+										<MenuFlyoutItem Text="Delete" Icon="Delete" Click="DeleteItem_Click" Tag="{Binding}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+									</MenuFlyout>
+								</Button.Flyout>
+							</Button>
+						</StackPanel>
+					</Grid>
+				</Grid>
+			</Border>
+		</DataTemplate>
 
-        <ItemsPanelTemplate x:Key="ItemsPanelTemplate">
-            <StackPanel Spacing="6" />
-        </ItemsPanelTemplate>
+		<!-- ========================================
+		     PROJECT FILE CARD TEMPLATE
+		     ======================================== -->
+		<DataTemplate x:Key="ProjectFileTemplate">
+			<Grid Margin="0,12,0,12" AutomationProperties.Name="{Binding Name}" DoubleTapped="ProjectFileItem_DoubleTapped" Background="Transparent">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
 
-        <local:ProjectItemTemplateSelector x:Key="ItemSelector" 
-                                           NoteTemplate="{StaticResource NoteTemplate}" 
-                                           TodoTemplate="{StaticResource TodoTemplate}" />
+				<!-- Column 0: Thumbnail without container in its original ratio, with reduced padding -->
+				<Grid Grid.Column="0" Margin="16,0,8,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+					<Image Source="{Binding IconSource}"
+						Height="48"
+						Stretch="Uniform"
+						HorizontalAlignment="Center"
+						VerticalAlignment="Center"
+						Visibility="{Binding IconVisibility}" />
+					<FontIcon Glyph="&#xE8A5;"
+						FontSize="24"
+						Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+						HorizontalAlignment="Center"
+						VerticalAlignment="Center"
+						Visibility="{Binding FallbackIconVisibility}" />
+				</Grid>
 
-        <DataTemplate x:Key="FolderTemplate" x:DataType="local:FolderViewModel">
-            <controls:SettingsCard 
-                Header="{x:Bind Name}" 
-                Description="{x:Bind ItemCountText}"
-                IsClickEnabled="True"
-                Click="FolderCard_Click"
-                Tag="{x:Bind Path}">
-                <controls:SettingsCard.HeaderIcon>
-                    <BitmapIcon UriSource="{x:Bind IconUri}" ShowAsMonochrome="False" />
-                </controls:SettingsCard.HeaderIcon>
-            </controls:SettingsCard>
-        </DataTemplate>
-    </Page.Resources>
+				<!-- Column 1: Text details -->
+				<StackPanel Margin="12,0,0,0" Grid.Column="1" VerticalAlignment="Center">
+					<TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Style="{ThemeResource BaseTextBlockStyle}"
+						HorizontalAlignment="Left" Margin="0,0,0,6" LineHeight="20"/>
+					<TextBlock Text="{Binding RelativePath}" Visibility="{Binding RelativePathVisibility}" FontFamily="Segoe UI" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontWeight="Normal"
+						TextTrimming="CharacterEllipsis" Width="350" MaxLines="1" Margin="0,0,0,4"/>
+					<StackPanel Orientation="Horizontal">
+						<TextBlock Text="{Binding ProgramName}" Visibility="{Binding ProgramNameVisibility}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold"/>
+						<TextBlock Text=" ⋅ " Visibility="{Binding FirstSeparatorVisibility}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+						<TextBlock Text="{Binding Size}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+						<TextBlock Text=" ⋅ " Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+						<TextBlock Text="Modified " Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+						<TextBlock Text="{Binding Modified}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+					</StackPanel>
+				</StackPanel>
 
-    <Grid RowSpacing="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+				<!-- Column 2: Actions -->
+				<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0">
+					<Button Click="RemoveCustomFileBtn_Click"
+						Tag="{Binding}"
+						Visibility="{Binding CustomFileVisibility}"
+						Padding="8,6">
+						<FontIcon Glyph="&#xE711;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+					</Button>
+				</StackPanel>
+			</Grid>
+		</DataTemplate>
 
-        <!-- Header -->
-        <Grid Grid.Row="0" Margin="24,24,24,8">
-            <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Left">
-                <Button Click="BackButton_Click" 
-                        Style="{StaticResource SubtleButtonStyle}"
-                        VerticalAlignment="Center">
-                    <FontIcon Glyph="&#xE72B;" FontSize="16" />
-                </Button>
-                <StackPanel Spacing="4">
-                    <TextBlock x:Name="ProjectTitle" Text="" FontSize="28" FontWeight="SemiBold" />
-                    <TextBlock x:Name="ProjectPath" Text="" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
-            </StackPanel>
+		<!-- ========================================
+		     TODO TEMPLATE
+		     Template for displaying todo items with:
+		     - Checkbox for completion status
+		     - Todo title, priority badge, and description
+		     - Edit/Delete action buttons
+		     ======================================== -->
+		<DataTemplate x:Key="TodoTemplate">
+			<Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+				BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+				BorderThickness="1"
+				CornerRadius="8"
+				Padding="16"
+				Margin="0,0,0,8"
+				HorizontalAlignment="Stretch"
+				MinHeight="140">
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="*" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+					</Grid.RowDefinitions>
+					
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="Auto" />
+						</Grid.ColumnDefinitions>
+						<TextBlock Text="{Binding Heading}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Margin="0,0,8,8" />
+						<Border Grid.Column="1" Background="{Binding PriorityBackgroundColor}" CornerRadius="4" Padding="6,2" Visibility="{Binding PriorityVisibility}" VerticalAlignment="Top">
+							<StackPanel Orientation="Horizontal" Spacing="4">
+								<FontIcon Glyph="&#xE7C1;" FontSize="10" Foreground="{Binding PriorityIconColor}" VerticalAlignment="Center"/>
+								<TextBlock Text="{Binding PriorityText}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding PriorityTextColor}" />
+							</StackPanel>
+						</Border>
+					</Grid>
+					
+					<StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,12" VerticalAlignment="Top">
+						<TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="13" VerticalAlignment="Top" TextDecorations="{Binding TextDecoration}" Foreground="{Binding TextColorBrush}" />
+					</StackPanel>
+					
+					<Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="-16,0,-16,12" />
+					
+					<Grid Grid.Row="3" VerticalAlignment="Bottom">
+						<StackPanel Orientation="Horizontal" Spacing="6" Visibility="{Binding DueDateVisibility}" VerticalAlignment="Center">
+							<FontIcon Glyph="&#xF763;" FontSize="14" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+							<TextBlock Text="{Binding DueDateString}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+						</StackPanel>
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+							<Button Style="{StaticResource SubtleButtonStyle}" Padding="6">
+								<FontIcon Glyph="&#xE712;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+								<Button.Flyout>
+									<MenuFlyout>
+										<MenuFlyoutItem Text="Edit" Icon="Edit" Click="EditItem_Click" Tag="{Binding}" />
+										<MenuFlyoutItem Text="Delete" Icon="Delete" Click="DeleteItem_Click" Tag="{Binding}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+									</MenuFlyout>
+								</Button.Flyout>
+							</Button>
+						</StackPanel>
+					</Grid>
+				</Grid>
+			</Border>
+		</DataTemplate>
 
-            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <Button x:Name="EditBtn" Click="EditProject_Click" ToolTipService.ToolTip="Edit Project">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE70F;" FontSize="14" />
-                        <TextBlock Text="Edit" />
-                    </StackPanel>
-                </Button>
-                <Button x:Name="DeleteBtn" Click="DeleteProject_Click" ToolTipService.ToolTip="Delete Project">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE74D;" FontSize="14" />
-                        <TextBlock Text="Delete" />
-                    </StackPanel>
-                </Button>
-                <AppBarSeparator Margin="4,0,4,0" />
-                <Button x:Name="OpenFolderBtn" Click="OpenFolder_Click">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xED25;" FontSize="14" />
-                        <TextBlock Text="Open Folder" />
-                    </StackPanel>
-                </Button>
-                <custom:BlenderLaunchButton x:Name="OpenBlendBtn" 
-                                            Project="{x:Bind _project, Mode=OneWay}" 
-                                            Text="Open Project" 
-                                            IconGlyph="&#xE8E5;" />
-            </StackPanel>
-        </Grid>
+		<!-- ========================================
+		     TEMPLATE SELECTOR
+		     Chooses between Note and Todo templates
+		     based on item type
+		     ======================================== -->
+		<ItemsPanelTemplate x:Key="ItemsPanelTemplate">
+			<VariableSizedWrapGrid Orientation="Horizontal" />
+		</ItemsPanelTemplate>
+		<local:ProjectItemTemplateSelector x:Key="ItemSelector"
+			NoteTemplate="{StaticResource NoteTemplate}"
+			TodoTemplate="{StaticResource TodoTemplate}" />
 
-        <!-- Quick Stats -->
-        <Grid Grid.Row="1" Margin="24,0,24,0" ColumnSpacing="12" RowSpacing="12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+		<!-- ========================================
+		     FOLDER HEADER TEMPLATE
+		     Template for folder headers with:
+		     - Expand/collapse icon
+		     - Folder icon and name
+		     - Item count
+		     ======================================== -->
+		<DataTemplate x:Key="FolderHeaderTemplate" x:DataType="local:FolderViewModel">
+			<Grid ColumnSpacing="12">
+				<!-- Column 0: Expand Icon, Column 1: Folder Icon, Column 2: Folder Name, Column 3: Item Count -->
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="20" />
+					<ColumnDefinition Width="24" />
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                    BorderThickness="1" CornerRadius="8" Padding="12">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Blender Version" FontSize="11" FontWeight="SemiBold" 
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Name="BlenderVersionText" FontSize="16" FontWeight="SemiBold" />
-                </StackPanel>
-            </Border>
+				<!-- Expand/Collapse Icon -->
+				<FontIcon Glyph="{x:Bind ExpandIcon, Mode=OneWay}"
+					FontSize="10"
+					Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+					HorizontalAlignment="Center"
+					VerticalAlignment="Center" />
 
-            <Border Grid.Column="1" Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                    BorderThickness="1" CornerRadius="8" Padding="12">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Blend File" FontSize="11" FontWeight="SemiBold" 
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Name="BlendFileText" FontSize="13" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-            </Border>
+				<!-- Folder Icon -->
+				<Image Grid.Column="1"
+					Source="{x:Bind FolderIcon, Mode=OneWay}"
+					Width="20"
+					Height="20"
+					VerticalAlignment="Center" />
 
-            <Border Grid.Column="2" Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                    BorderThickness="1" CornerRadius="8" Padding="12">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Created" FontSize="11" FontWeight="SemiBold" 
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Name="CreatedAtText" FontSize="13" />
-                </StackPanel>
-            </Border>
+				<!-- Folder Name -->
+				<TextBlock Grid.Column="2"
+					Text="{x:Bind Name}"
+					FontWeight="SemiBold"
+					VerticalAlignment="Center"
+					TextTrimming="CharacterEllipsis" />
 
-            <Border Grid.Column="3" Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                    BorderThickness="1" CornerRadius="8" Padding="12">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Last Modified" FontSize="11" FontWeight="SemiBold" 
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Name="ModifiedAtText" FontSize="13" />
-                </StackPanel>
-            </Border>
+				<!-- Item Count -->
+				<TextBlock Grid.Column="3"
+					Text="{x:Bind ItemCountText}"
+					FontSize="12"
+					Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+					VerticalAlignment="Center"
+					Margin="0,0,8,0" />
+			</Grid>
+		</DataTemplate>
 
-            <Border Grid.Column="4" Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                    BorderThickness="1" CornerRadius="8" Padding="12">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Project Size" FontSize="11" FontWeight="SemiBold" 
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Name="ProjectSizeText" FontSize="13" FontWeight="SemiBold" />
-                </StackPanel>
-            </Border>
-        </Grid>
+		<!-- ========================================
+		     FILE TEMPLATE
+		     Template for displaying file items with:
+		     - File icon
+		     - File name, date, and size
+		     - Context menu for file operations
+		     ======================================== -->
+		<DataTemplate x:Key="FileTemplate"
+			x:DataType="local:FileViewModel">
+			<Grid Padding="12,4"
+				DoubleTapped="FileItem_DoubleTapped"
+				Background="Transparent"
+				AutomationProperties.Name="{x:Bind Name}">
+				<!-- Context Menu for file operations -->
+				<Grid.ContextFlyout>
+					<MenuFlyout>
+						<!-- Open File Action -->
+						<MenuFlyoutItem Text="Open File"
+							Click="OpenFile_Click"
+							Tag="{x:Bind FullPath}">
+							<MenuFlyoutItem.Icon>
+								<FontIcon Glyph="&#xE8A5;" />
+							</MenuFlyoutItem.Icon>
+						</MenuFlyoutItem>
+						<!-- Open Folder Action -->
+						<MenuFlyoutItem Text="Open Folder"
+							Click="OpenContainingFolder_Click"
+							Tag="{x:Bind FullPath}">
+							<MenuFlyoutItem.Icon>
+								<FontIcon Glyph="&#xE8B7;" />
+							</MenuFlyoutItem.Icon>
+						</MenuFlyoutItem>
+						<MenuFlyoutSeparator />
+						<!-- Delete File Action -->
+						<MenuFlyoutItem Text="Delete"
+							Click="DeleteFile_Click"
+							Tag="{x:Bind FullPath}"
+							Foreground="{ThemeResource SystemFillColorCriticalBrush}">
+							<MenuFlyoutItem.Icon>
+								<FontIcon Glyph="&#xE74D;" />
+							</MenuFlyoutItem.Icon>
+						</MenuFlyoutItem>
+					</MenuFlyout>
+				</Grid.ContextFlyout>
+				<!-- Column 0: Icon, Column 1: Filename, Column 2: Date, Column 3: Size -->
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="200" />
+					<ColumnDefinition Width="100" />
+				</Grid.ColumnDefinitions>
+				<!-- File Icon -->
+				<Grid Width="20" Height="20" Margin="0,0,12,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+					<Image Source="{x:Bind IconSource, Mode=OneWay}"
+						Stretch="Uniform"
+						Visibility="{x:Bind IconVisibility, Mode=OneWay}" />
+					<FontIcon Glyph="&#xE8A5;"
+						FontSize="16"
+						Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+						Visibility="{x:Bind FallbackIconVisibility, Mode=OneWay}" />
+				</Grid>
+				<!-- Filename -->
+				<TextBlock Grid.Column="1"
+					Text="{x:Bind Name}"
+					FontSize="14"
+					FontWeight="SemiBold"
+					VerticalAlignment="Center"
+					TextTrimming="CharacterEllipsis" />
+				<!-- Date Modified -->
+				<TextBlock Grid.Column="2"
+					Text="{x:Bind ModifiedDateText}"
+					FontSize="13"
+					Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+					VerticalAlignment="Center"
+					Margin="12,0"
+					TextTrimming="CharacterEllipsis" />
+				<!-- File Size -->
+				<TextBlock Grid.Column="3"
+					Text="{x:Bind SizeText}"
+					FontSize="13"
+					Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+					VerticalAlignment="Center"
+					HorizontalAlignment="Right"
+					TextTrimming="CharacterEllipsis" />
+			</Grid>
+		</DataTemplate>
 
-        <!-- Main Content with SelectorBar -->
-        <Grid Grid.Row="2" RowSpacing="12">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+		<!-- ========================================
+		     FOLDER TEMPLATE
+		     Template for displaying folder structure with:
+		     - Collapsible folder header
+		     - Recursive subfolders display
+		     - Files list view
+		     - Empty folder message
+		     ======================================== -->
+		<DataTemplate x:Key="FolderTemplate"
+			x:DataType="local:FolderViewModel">
+			<StackPanel Margin="0,0,0,4">
+				<!-- Folder Header Button -->
+				<Button Click="FolderHeader_Click"
+					Tag="{x:Bind}"
+					Style="{StaticResource SubtleButtonStyle}"
+					HorizontalAlignment="Stretch"
+					HorizontalContentAlignment="Left"
+					Content="{x:Bind}"
+					ContentTemplate="{StaticResource FolderHeaderTemplate}"
+					Padding="8,6" />
 
-            <Grid Grid.Row="0" Margin="24,0,24,0">
-                <SelectorBar x:Name="ContentSelectorBar" HorizontalAlignment="Left" SelectionChanged="ContentSelectorBar_SelectionChanged">
-                    <SelectorBarItem x:Name="LocationsTab" Text="Project Locations" Icon="Folder" />
-                    <SelectorBarItem x:Name="NotesTab" Text="Notes &amp; Tasks" Icon="Edit" />
-                    <SelectorBarItem x:Name="FilesTab" Text="Project Files" Icon="Document" />
-                </SelectorBar>
-                
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
-                    <Button x:Name="RefreshLocationsBtn" Click="RefreshLocations_Click" Padding="12,6" ToolTipService.ToolTip="Scan for new folders">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xE72C;" FontSize="12" />
-                            <TextBlock Text="Refresh" FontSize="13" />
-                        </StackPanel>
-                    </Button>
-                    <DropDownButton x:Name="AddNoteBtn" Visibility="Collapsed" Padding="12,6">
-                        <DropDownButton.Content>
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon Glyph="&#xE710;" FontSize="12" />
-                                <TextBlock Text="Add Item" FontSize="13" />
-                            </StackPanel>
-                        </DropDownButton.Content>
-                        <DropDownButton.Flyout>
-                            <MenuFlyout>
-                                <MenuFlyoutItem Text="Add Note" Click="AddProjectItem_Click" Tag="Note" />
-                                <MenuFlyoutItem Text="Add Task" Click="AddProjectItem_Click" Tag="Todo" />
-                            </MenuFlyout>
-                        </DropDownButton.Flyout>
-                    </DropDownButton>
-                    <Button x:Name="AddFileBtn" Visibility="Collapsed" Click="AddCustomFile_Click" Padding="12,6">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xE710;" FontSize="12" />
-                            <TextBlock Text="Add File" FontSize="13" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </Grid>
+				<!-- Recursive Subfolders Display -->
+				<ItemsControl ItemsSource="{x:Bind Subfolders}"
+					Visibility="{x:Bind ContentVisibility, Mode=OneWay}"
+					Padding="24,0,0,0"
+					Margin="24,4,0,0"
+					HorizontalContentAlignment="Stretch">
+					<!-- Style for subfolder items -->
+					<ItemsControl.ItemContainerStyle>
+						<Style TargetType="ContentPresenter">
+							<Setter Property="HorizontalAlignment" Value="Stretch" />
+						</Style>
+					</ItemsControl.ItemContainerStyle>
+					<!-- Recursive template for subfolders -->
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<ContentControl Content="{Binding}"
+								ContentTemplate="{StaticResource FolderTemplate}"
+								HorizontalContentAlignment="Stretch"
+								HorizontalAlignment="Stretch" />
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
 
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="24,16,24,24">
-                <Frame x:Name="ContentFrame" />
-            </ScrollViewer>
-        </Grid>
+				<!-- Files Only ListView -->
+				<ListView ItemsSource="{x:Bind FilesOnly}"
+					ItemTemplate="{StaticResource FileTemplate}"
+					SelectionMode="Single"
+					IsItemClickEnabled="True"
+					Visibility="{x:Bind ContentVisibility, Mode=OneWay}"
+					Padding="24,0,0,0"
+					Background="Transparent"
+					BorderThickness="0">
+					<!-- Style for file list items -->
+					<ListView.ItemContainerStyle>
+						<Style TargetType="ListViewItem"
+							BasedOn="{StaticResource DefaultListViewItemStyle}">
+							<Setter Property="HorizontalContentAlignment"
+								Value="Stretch" />
+							<Setter Property="Margin"
+								Value="0,2" />
+							<Setter Property="Padding"
+								Value="0" />
+							<Setter Property="CornerRadius"
+								Value="8" />
+						</Style>
+					</ListView.ItemContainerStyle>
+				</ListView>
 
-        <!-- Warning -->
-        <InfoBar x:Name="MissingProjectInfoBar" Grid.Row="2"
-                 Margin="32,0,32,32" VerticalAlignment="Bottom"
-                 IsOpen="False"
-                 IsClosable="False"
-                 Severity="Warning"
-                 Title="Project Folder Missing"
-                 Message="The project folder could not be found on disk. Some actions may not work." />
-    </Grid>
+				<!-- Empty Folder Message -->
+				<TextBlock Text="This folder is empty"
+					Visibility="{x:Bind EmptyVisibility, Mode=OneWay}"
+					Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+					FontSize="13"
+					FontStyle="Normal"
+					Margin="56,0,0,12" />
+			</StackPanel>
+		</DataTemplate>
+	</Page.Resources>
+
+	<!-- ========================================
+	     PAGE LAYOUT
+	     Main grid layout for the page with:
+	     - Header section
+	     - Content area (notes/todos/files)
+	     ======================================== -->
+	<Grid RowSpacing="16">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+		<!-- Header -->
+		<Grid Grid.Row="0"
+			Margin="24,24,24,8">
+			<StackPanel Orientation="Horizontal"
+				Spacing="16"
+				HorizontalAlignment="Left">
+				<Button Click="BackButton_Click"
+					Style="{StaticResource SubtleButtonStyle}"
+					VerticalAlignment="Center">
+					<FontIcon Glyph="&#xE72B;"
+						FontSize="16" />
+				</Button>
+				<StackPanel Spacing="4">
+					<TextBlock x:Name="ProjectTitle"
+						Text=""
+						FontSize="28"
+						FontWeight="SemiBold" />
+					<TextBlock x:Name="ProjectPath"
+						Text=""
+						FontSize="12"
+						Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+				</StackPanel>
+			</StackPanel>
+			<CommandBar HorizontalAlignment="Right"
+				VerticalAlignment="Center"
+				Background="Transparent"
+				DefaultLabelPosition="Right">
+				<AppBarButton x:Name="OpenFolderBtn"
+					Icon="Folder"
+					Label="Open Folder"
+					Click="OpenFolder_Click" />
+				<AppBarElementContainer VerticalAlignment="Center" Margin="8,0,0,0">
+					<custom:BlenderLaunchButton x:Name="OpenBlendBtn"
+						Project="{x:Bind Project, Mode=OneWay}"
+						Text="Open Project"
+						IconGlyph="&#xE8E5;" />
+				</AppBarElementContainer>
+
+				<CommandBar.SecondaryCommands>
+					<AppBarButton x:Name="EditBtn"
+						Icon="Edit"
+						Label="Edit"
+						Click="EditProject_Click" />
+					<AppBarButton x:Name="DeleteBtn"
+						Icon="Delete"
+						Label="Delete"
+						Click="DeleteProject_Click" />
+				</CommandBar.SecondaryCommands>
+			</CommandBar>
+		</Grid>
+
+		<!-- Quick Stats -->
+		<Grid Grid.Row="1"
+			Margin="24,0,24,0"
+			ColumnSpacing="12"
+			RowSpacing="12">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+			<Border Grid.Column="0"
+				Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+				BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+				BorderThickness="1"
+				CornerRadius="8"
+				Padding="16,12">
+				<Grid ColumnSpacing="12">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition Width="*" />
+					</Grid.ColumnDefinitions>
+					<FontIcon Glyph="&#xE946;" FontSize="20" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+					<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+						<TextBlock Text="Blender Version" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+						<TextBlock x:Name="BlenderVersionText" FontSize="16" FontWeight="SemiBold" />
+					</StackPanel>
+				</Grid>
+			</Border>
+			<Border Grid.Column="1"
+				Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+				BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+				BorderThickness="1"
+				CornerRadius="8"
+				Padding="16,12">
+				<Grid ColumnSpacing="12">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition Width="*" />
+					</Grid.ColumnDefinitions>
+					<FontIcon Glyph="&#xE7C3;" FontSize="20" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+					<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+						<TextBlock Text="Blend File" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+						<TextBlock x:Name="BlendFileText" FontSize="13" TextTrimming="CharacterEllipsis" />
+					</StackPanel>
+				</Grid>
+			</Border>
+			<Border Grid.Column="2"
+				Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+				BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+				BorderThickness="1"
+				CornerRadius="8"
+				Padding="16,12">
+				<Grid ColumnSpacing="12">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition Width="*" />
+					</Grid.ColumnDefinitions>
+					<FontIcon Glyph="&#xE787;" FontSize="20" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+					<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+						<TextBlock Text="Created" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+						<TextBlock x:Name="CreatedAtText" FontSize="13" />
+					</StackPanel>
+				</Grid>
+			</Border>
+			<Border Grid.Column="3"
+				Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+				BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+				BorderThickness="1"
+				CornerRadius="8"
+				Padding="16,12">
+				<Grid ColumnSpacing="12">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition Width="*" />
+					</Grid.ColumnDefinitions>
+					<FontIcon Glyph="&#xE823;" FontSize="20" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+					<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+						<TextBlock Text="Last Modified" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+						<TextBlock x:Name="ModifiedAtText" FontSize="13" />
+					</StackPanel>
+				</Grid>
+			</Border>
+			<Border Grid.Column="4"
+				Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+				BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+				BorderThickness="1"
+				CornerRadius="8"
+				Padding="16,12">
+				<Grid ColumnSpacing="12">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition Width="*" />
+					</Grid.ColumnDefinitions>
+					<FontIcon Glyph="&#xE74C;" FontSize="20" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+					<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+						<TextBlock Text="Project Size" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+						<TextBlock x:Name="ProjectSizeText" FontSize="13" FontWeight="SemiBold" />
+					</StackPanel>
+				</Grid>
+			</Border>
+		</Grid>
+
+		<!-- Main Content with SelectorBar -->
+		<Grid Grid.Row="2"
+			RowSpacing="12">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
+			<Grid Grid.Row="0"
+				Margin="24,0,24,0">
+				<SelectorBar x:Name="ContentSelectorBar"
+					HorizontalAlignment="Left"
+					SelectionChanged="ContentSelectorBar_SelectionChanged">
+					<SelectorBarItem x:Name="LocationsTab"
+						Text="Project Locations"
+						Icon="Folder" />
+					<SelectorBarItem x:Name="NotesTab"
+						Text="Notes">
+						<SelectorBarItem.Icon>
+							<FontIcon Glyph="&#xE70B;" />
+						</SelectorBarItem.Icon>
+					</SelectorBarItem>
+					<SelectorBarItem x:Name="TasksTab"
+						Text="Tasks">
+						<SelectorBarItem.Icon>
+							<FontIcon Glyph="&#xF7EC;" />
+						</SelectorBarItem.Icon>
+					</SelectorBarItem>
+					<SelectorBarItem x:Name="FilesTab"
+						Text="Project Files"
+						Icon="Document" />
+				</SelectorBar>
+				<StackPanel Orientation="Horizontal"
+					HorizontalAlignment="Right"
+					VerticalAlignment="Center"
+					Spacing="8">
+					<AutoSuggestBox x:Name="GlobalSearchBox"
+						PlaceholderText="Search..."
+						Width="250"
+						Visibility="Collapsed"
+						TextChanged="GlobalSearchBox_TextChanged" />
+					<Button x:Name="RefreshLocationsBtn"
+						Click="RefreshLocations_Click"
+						Padding="12,6"
+						ToolTipService.ToolTip="Scan for new folders">
+						<StackPanel Orientation="Horizontal"
+							Spacing="6">
+							<FontIcon Glyph="&#xE72C;"
+								FontSize="12" />
+							<TextBlock Text="Refresh"
+								FontSize="13" />
+						</StackPanel>
+					</Button>
+					<Button x:Name="AddNoteBtn"
+						Visibility="Collapsed"
+						Click="AddProjectItem_Click"
+						Padding="12,6">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<FontIcon Glyph="&#xE70B;" FontSize="12" />
+							<TextBlock Text="Add Item" FontSize="13" />
+						</StackPanel>
+					</Button>
+					<Button x:Name="AddFileBtn"
+						Visibility="Collapsed"
+						Click="AddCustomFile_Click"
+						Padding="12,6">
+						<StackPanel Orientation="Horizontal"
+							Spacing="6">
+							<FontIcon Glyph="&#xE710;"
+								FontSize="12" />
+							<TextBlock Text="Add File"
+								FontSize="13" />
+						</StackPanel>
+					</Button>
+				</StackPanel>
+			</Grid>
+			<ScrollViewer Grid.Row="1"
+				VerticalScrollBarVisibility="Auto"
+				HorizontalScrollBarVisibility="Disabled"
+				Padding="24,16,24,24">
+				<Frame x:Name="ContentFrame" />
+			</ScrollViewer>
+		</Grid>
+
+		<!-- Warning -->
+		<InfoBar x:Name="MissingProjectInfoBar"
+			Grid.Row="2"
+			Margin="32,0,32,32"
+			VerticalAlignment="Bottom"
+			IsOpen="False"
+			IsClosable="False"
+			Severity="Warning"
+			Title="Project Folder Missing"
+			Message="The project folder could not be found on disk. Some actions may not work." />
+	</Grid>
 </Page>

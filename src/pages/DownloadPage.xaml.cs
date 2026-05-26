@@ -1,14 +1,16 @@
+using BlendHub.Helpers;
+using BlendHub.Models;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using System;
+using BlendHub.Controls;
+using BlendHub.Dialogs;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using BlendHub.Models;
-using BlendHub.Helpers;
-using System.Diagnostics;
-using System.Collections.ObjectModel;
 
 namespace BlendHub.Pages
 {
@@ -19,13 +21,14 @@ namespace BlendHub.Pages
         private string _currentSortOption = "Version (Newest First)";
         private bool _isLoading = false;
 
-        public ObservableCollection<BlenderVersionGroup> VisibleVersions { get; } = new();
+        public ObservableCollection<VersionGroup> GroupedVersionsCollection { get; } = new();
 
         public DownloadPage()
         {
             this.InitializeComponent();
-            VersionsListView.ItemsSource = VisibleVersions;
-            this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
+
+            
+            GroupedVersions.Source = GroupedVersionsCollection;
         }
 
         protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
@@ -36,8 +39,6 @@ namespace BlendHub.Pages
                 _ = LoadVersionsAsync();
             }
         }
-
-
 
         private async Task LoadVersionsAsync()
         {
@@ -146,13 +147,13 @@ namespace BlendHub.Pages
             if (_allVersions.Count == 0)
             {
                 ShowError("No version data available. Please refresh.");
-                VisibleVersions.Clear();
+                GroupedVersions.Source = null;
                 return;
             }
 
             if (ErrorInfoBar != null)
                 ErrorInfoBar.IsOpen = false;
-            
+
             ApplyFiltersAndSort();
         }
 
@@ -185,11 +186,58 @@ namespace BlendHub.Pages
                 _ => filtered
             };
 
-            VisibleVersions.Clear();
-            foreach (var item in filtered)
+            // Determine if we should sort groups in descending order based on the selected option
+            bool isDescending = _currentSortOption.Contains("Newest");
+
+            // Group by major version (e.g., "5.x", "4.x", etc.)
+            var grouped = filtered.GroupBy(v => GetMajorVersionCategory(v.ShortVersion));
+
+            IOrderedEnumerable<IGrouping<string, BlenderVersionGroup>> sortedGroups;
+            if (isDescending)
             {
-                VisibleVersions.Add(item);
+                sortedGroups = grouped.OrderByDescending(g => GetMajorVersionOrder(g.Key));
             }
+            else
+            {
+                sortedGroups = grouped.OrderBy(g => GetMajorVersionOrder(g.Key));
+            }
+
+            // Create grouped collection and update it incrementally
+            var groupedCollection = new List<IGrouping<string, BlenderVersionGroup>>();
+            foreach (var group in sortedGroups)
+            {
+                groupedCollection.Add(group);
+            }
+
+            UpdateGroupedVersions(groupedCollection);
+        }
+
+        private string GetMajorVersionCategory(string shortVersion)
+        {
+            // Extract major version only (e.g., "5.0" from "5.3.0", "4.0" from "4.2.1")
+            if (string.IsNullOrEmpty(shortVersion)) return "Unknown";
+
+            var parts = shortVersion.Split('.');
+            if (parts.Length >= 1)
+            {
+                return $"{parts[0]}.0";
+            }
+
+            return shortVersion;
+        }
+
+        private int GetMajorVersionOrder(string category)
+        {
+            // For sorting categories (5.x comes before 4.x, etc.)
+            if (string.IsNullOrEmpty(category)) return 0;
+
+            var parts = category.Split('.');
+            if (parts.Length >= 1 && int.TryParse(parts[0], out var major))
+            {
+                return major;
+            }
+
+            return 0;
         }
 
         private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
@@ -294,7 +342,8 @@ namespace BlendHub.Pages
                         group.ReleaseDate,
                         group.IsLatest == Visibility.Visible,
                         installers,
-                        baseUrl
+                        baseUrl,
+                        dialog
                     );
                 }
 
@@ -306,5 +355,93 @@ namespace BlendHub.Pages
                 ShowError($"Failed to open download dialog: {ex.Message}");
             }
         }
+
+        private void UpdateGroupedVersions(List<IGrouping<string, BlenderVersionGroup>> targetGroups)
+        {
+            if (GroupedVersionsCollection == null) return;
+
+            // 1. Remove groups that are no longer in targetGroups
+            for (int i = GroupedVersionsCollection.Count - 1; i >= 0; i--)
+            {
+                var existingGroup = GroupedVersionsCollection[i];
+                if (!targetGroups.Any(g => g.Key == existingGroup.Key))
+                {
+                    GroupedVersionsCollection.RemoveAt(i);
+                }
+            }
+
+            // 2. Add or sync groups
+            for (int i = 0; i < targetGroups.Count; i++)
+            {
+                var targetGroup = targetGroups[i];
+                var existingGroup = GroupedVersionsCollection.FirstOrDefault(g => g.Key == targetGroup.Key);
+
+                if (existingGroup == null)
+                {
+                    var newGroup = new VersionGroup { Key = targetGroup.Key };
+                    foreach (var item in targetGroup)
+                    {
+                        newGroup.Add(item);
+                    }
+                    GroupedVersionsCollection.Insert(i, newGroup);
+                }
+                else
+                {
+                    SyncGroupItems(existingGroup, targetGroup.ToList());
+
+                    int existingIdx = GroupedVersionsCollection.IndexOf(existingGroup);
+                    if (existingIdx != i)
+                    {
+                        GroupedVersionsCollection.RemoveAt(existingIdx);
+                        GroupedVersionsCollection.Insert(i, existingGroup);
+                    }
+                }
+            }
+        }
+
+        private void SyncGroupItems(VersionGroup existingGroup, List<BlenderVersionGroup> targetItems)
+        {
+            // Remove items no longer in targetItems
+            for (int i = existingGroup.Count - 1; i >= 0; i--)
+            {
+                var item = existingGroup[i];
+                if (!targetItems.Any(x => x.ShortVersion == item.ShortVersion))
+                {
+                    existingGroup.RemoveAt(i);
+                }
+            }
+
+            // Add or move items to match targetItems
+            for (int i = 0; i < targetItems.Count; i++)
+            {
+                var targetItem = targetItems[i];
+                int existingIdx = -1;
+
+                for (int j = i; j < existingGroup.Count; j++)
+                {
+                    if (existingGroup[j].ShortVersion == targetItem.ShortVersion)
+                    {
+                        existingIdx = j;
+                        break;
+                    }
+                }
+
+                if (existingIdx == -1)
+                {
+                    existingGroup.Insert(i, targetItem);
+                }
+                else if (existingIdx != i)
+                {
+                    var itemToMove = existingGroup[existingIdx];
+                    existingGroup.RemoveAt(existingIdx);
+                    existingGroup.Insert(i, itemToMove);
+                }
+            }
+        }
+    }
+
+    public class VersionGroup : ObservableCollection<BlenderVersionGroup>
+    {
+        public string Key { get; set; } = string.Empty;
     }
 }

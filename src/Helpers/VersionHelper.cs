@@ -14,7 +14,7 @@ namespace BlendHub.Helpers
                 if (parts.Length > 0 && !string.IsNullOrEmpty(parts[0]))
                     return parts[0];
             }
-            
+
             // Microsoft Store format: "Blender (latest version)"
             if (filename.Contains("latest"))
             {
@@ -54,7 +54,7 @@ namespace BlendHub.Helpers
                     var afterBlender = name.Substring(7);
                     // Find where version number ends (before - or _)
                     var endIdx = 0;
-                    while (endIdx < afterBlender.Length && 
+                    while (endIdx < afterBlender.Length &&
                            (char.IsDigit(afterBlender[endIdx]) || afterBlender[endIdx] == '.'))
                     {
                         endIdx++;

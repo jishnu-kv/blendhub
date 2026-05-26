@@ -15,7 +15,9 @@
         <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </Page.Resources>
 
-    <Grid>
+    <Grid x:Name="RootGrid"
+          AllowDrop="True"
+          DragOver="RootGrid_DragOver">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -25,9 +27,7 @@
         <StackPanel Grid.Row="0" Spacing="16" Padding="24,24,24,8">
             <!-- Header -->
             <Grid>
-                <StackPanel Spacing="8">
-                    <TextBlock Text="Project Management" FontSize="28" FontWeight="SemiBold" />
-                </StackPanel>
+                <TextBlock Text="Projects" Style="{StaticResource TitleTextBlockStyle}" VerticalAlignment="Center" />
 
                 <Button x:Name="CreateProjectBtn" 
                         Content="Create Project" 
@@ -53,10 +53,10 @@
                      IsOpen="False"
                      Severity="Success"
                      Title="Project Created">
-                <InfoBar.ActionButton>
-                    <Button Content="Open Project" Click="OpenProject_Click" />
-                </InfoBar.ActionButton>
-            </InfoBar>
+                 <InfoBar.ActionButton>
+                     <Button Content="Open Project" Click="OpenProject_Click" />
+                 </InfoBar.ActionButton>
+             </InfoBar>
 
             <!-- Projects List Header with Search and Sort -->
             <StackPanel x:Name="ProjectsListContainer" Spacing="8">
@@ -69,19 +69,11 @@
                     </Grid.ColumnDefinitions>
                     
                     <!-- Left side: Search and Refresh -->
-                    <Grid Grid.Column="0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                         <AutoSuggestBox x:Name="SearchTextBox" 
-                                       Grid.Column="0"
                                        Width="280"
-                                       HorizontalAlignment="Left"
                                        VerticalAlignment="Center"
                                        PlaceholderText="Search projects..."
-                                       Padding="12,6,8,6"
                                        TextChanged="Filter_TextChanged">
                             <AutoSuggestBox.QueryIcon>
                                 <FontIcon Glyph="&#xE721;" FontSize="14" />
@@ -89,19 +81,16 @@
                         </AutoSuggestBox>
                         
                         <Button x:Name="RefreshProjectsButton" 
-                                Grid.Column="1"
                                 Style="{StaticResource DefaultButtonStyle}"
                                 Width="32"
                                 Height="32"
-                                Margin="12,0,0,0"
                                 Padding="0"
                                 Click="RefreshProjectsButton_Click"
                                 ToolTipService.ToolTip="Refresh Projects"
-                                HorizontalAlignment="Left"
                                 VerticalAlignment="Center">
                             <FontIcon Glyph="&#xE72C;" FontSize="14" />
                         </Button>
-                    </Grid>
+                    </StackPanel>
                     
                     <!-- Right side: Sort Menu -->
                     <Button x:Name="SortButton"
@@ -112,43 +101,50 @@
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE8CB;" FontSize="14" VerticalAlignment="Center" />
                             <TextBlock x:Name="SortButtonText" Text="Date Created (Newest)" VerticalAlignment="Center" />
-                            <FontIcon Glyph="&#xE70D;" FontSize="12" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            <FontIcon Glyph="&#xE70D;" FontSize="12" VerticalAlignment="Center" />
                         </StackPanel>
                         <Button.Flyout>
                             <MenuFlyout Placement="Bottom">
-                                <RadioMenuFlyoutItem x:Name="SortDateDescItem" 
-                                                     Text="Date Created (Newest)" 
-                                                     GroupName="SortGroup"
+                                <RadioMenuFlyoutItem x:Name="SortFieldDateItem" 
+                                                     Text="Date Created" 
+                                                     GroupName="SortFieldGroup"
                                                      IsChecked="True"
-                                                     Click="SortMenuItem_Click"/>
-                                <RadioMenuFlyoutItem x:Name="SortDateAscItem" 
-                                                     Text="Date Created (Oldest)" 
-                                                     GroupName="SortGroup"
-                                                     Click="SortMenuItem_Click"/>
-                                <RadioMenuFlyoutItem x:Name="SortNameAscItem" 
-                                                     Text="Name (A-Z)" 
-                                                     GroupName="SortGroup"
-                                                     Click="SortMenuItem_Click"/>
-                                <RadioMenuFlyoutItem x:Name="SortNameDescItem" 
-                                                     Text="Name (Z-A)" 
-                                                     GroupName="SortGroup"
-                                                     Click="SortMenuItem_Click"/>
+                                                     Tag="Date"
+                                                     Click="SortFieldItem_Click"/>
+                                <RadioMenuFlyoutItem x:Name="SortFieldModifiedItem" 
+                                                     Text="Date Modified" 
+                                                     GroupName="SortFieldGroup"
+                                                     Tag="Modified"
+                                                     Click="SortFieldItem_Click"/>
+                                <RadioMenuFlyoutItem x:Name="SortFieldNameItem" 
+                                                     Text="Name" 
+                                                     GroupName="SortFieldGroup"
+                                                     Tag="Name"
+                                                     Click="SortFieldItem_Click"/>
+                                <MenuFlyoutSeparator/>
+                                <RadioMenuFlyoutItem x:Name="SortOrderAscItem" 
+                                                     Text="Ascending" 
+                                                     GroupName="SortOrderGroup"
+                                                     Tag="Asc"
+                                                     Click="SortOrderItem_Click"/>
+                                <RadioMenuFlyoutItem x:Name="SortOrderDescItem" 
+                                                     Text="Descending" 
+                                                     GroupName="SortOrderGroup"
+                                                     IsChecked="True"
+                                                     Tag="Desc"
+                                                     Click="SortOrderItem_Click"/>
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
                 </Grid>
-                
-                <!-- Separator -->
-                <Border Height="1"
-                        Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
             </StackPanel>
         </StackPanel>
 
         <!-- Scrollable Content Section -->
-        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="24,0,24,24">
-            <StackPanel>
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="24,16,24,24">
+            <StackPanel Spacing="16">
 
-                <!-- Drag and Drop Zone -->
+                <!-- Drag and Drop Zone (Visible only when no projects exist) -->
                 <Border x:Name="DropZone"
                         AllowDrop="True"
                         DragOver="DropZone_DragOver"
@@ -192,31 +188,64 @@
                 </Border>
 
                 <!-- Projects List -->
-                <ItemsControl x:Name="ProjectsList">
-                    <ItemsControl.ItemsPanel>
+                <ListView x:Name="ProjectsList"
+                          SelectionMode="None"
+                          HorizontalAlignment="Stretch">
+                    <ListView.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <ItemsStackPanel Orientation="Vertical" />
+                            <ItemsStackPanel Orientation="Vertical" CacheLength="2" />
                         </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
+                    </ListView.ItemsPanel>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="MinHeight" Value="0"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
                         <DataTemplate x:DataType="models:Project">
                             <custom:ProjectCardView Project="{x:Bind}" />
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                    </ListView.ItemTemplate>
+                </ListView>
 
                 <!-- No Search Results Message -->
                 <StackPanel x:Name="NoSearchResultsPanel" Spacing="16" Margin="0,40,0,0" HorizontalAlignment="Center" Visibility="Collapsed">
                     <FontIcon Glyph="&#xE94C;" FontSize="48" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                     <TextBlock Text="No projects found matching your search." Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
-
-                <!-- Empty state -->
-                <StackPanel x:Name="NoProjectsPanel" Spacing="16" Margin="0,40,0,0" HorizontalAlignment="Center">
-                    <FontIcon Glyph="&#xE7C3;" FontSize="64" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                    <TextBlock Text="No projects yet. Create your first project by clicking 'Create Project' or drag a folder above." Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Full-Page Drag Overlay -->
+        <Grid x:Name="DragOverlay"
+              Grid.RowSpan="2"
+              Background="{ThemeResource ControlAltFillColorSecondaryBrush}"
+              Visibility="Collapsed"
+              Canvas.ZIndex="100"
+              AllowDrop="True"
+              DragOver="DragOverlay_DragOver"
+              DragLeave="DragOverlay_DragLeave"
+              Drop="DragOverlay_Drop">
+            <Grid Margin="24">
+                <Rectangle Stroke="{ThemeResource AccentFillColorDefaultBrush}"
+                           StrokeThickness="2"
+                           StrokeDashArray="3,3"
+                           RadiusX="8"
+                           RadiusY="8"
+                           Fill="Transparent"
+                           Margin="0"/>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                    <FontIcon Glyph="&#xE8E5;" FontSize="48" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                    <TextBlock Text="Drop folder to add project to BlendHub"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
     </Grid>
 </Page>

@@ -1,20 +1,23 @@
+using BlendHub.Pages;
 using Microsoft.UI;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Windowing;
-using Microsoft.UI.Dispatching;
-using WinRT.Interop;
+using BlendHub.ReferenceBoard;
 using System;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using BlendHub.Pages;
+using WinRT.Interop;
 
 namespace BlendHub
 {
     public sealed partial class MainWindow : Window
     {
+        private UIElement? _mainContent;
+        private Pages.SplashScreenPage? _splashPage;
         private readonly Dictionary<string, Type> _navigationMap = new()
         {
             { "home", typeof(HomePage) },
@@ -22,7 +25,10 @@ namespace BlendHub
             { "backup", typeof(BackupPage) },
             { "restore", typeof(RestorePage) },
             { "sync", typeof(SyncPage) },
-            { "project", typeof(ProjectPage) }
+            { "project", typeof(ProjectPage) },
+            { "referenceboard", typeof(BlendHub.ReferenceBoard.ReferenceBoard) },
+            { "addons", typeof(AddonsPage) },
+            { "settings", typeof(SettingsPage) }
         };
 
         public NavigationView NavigationView => NavView;
@@ -31,15 +37,26 @@ namespace BlendHub
         public MainWindow()
         {
             InitializeComponent();
+            _mainContent = this.Content;
             SetWindowProperties();
 
             DispatcherQueue queue = DispatcherQueue.GetForCurrentThread();
             queue.TryEnqueue(() =>
             {
-                var defaultPage = Services.AppSettingsService.Instance.Settings.DefaultPage;
-                var itemToSelect = NavView.MenuItems.OfType<NavigationViewItem>()
-                                    .FirstOrDefault(i => i.Tag?.ToString() == defaultPage) ?? HomeItem;
-                NavView.SelectedItem = itemToSelect;
+                // Apply theme if selected during setup
+                if (App.SelectedTheme != ElementTheme.Default)
+                {
+                    RootGrid.RequestedTheme = App.SelectedTheme;
+                }
+
+                // If splash screen is active, wait until it finishes to navigate
+                if (_splashPage == null)
+                {
+                    var defaultPage = Services.AppSettingsService.Instance.Settings.DefaultPage;
+                    var itemToSelect = NavView.MenuItems.OfType<NavigationViewItem>()
+                                        .FirstOrDefault(i => i.Tag?.ToString() == defaultPage) ?? HomeItem;
+                    NavView.SelectedItem = itemToSelect;
+                }
             });
         }
 
@@ -49,48 +66,39 @@ namespace BlendHub
             this.ExtendsContentIntoTitleBar = true;
             this.SetTitleBar(AppTitleBar);
 
+            this.SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
+
             // Set the window icon
             AppWindow appWindow = GetAppWindowForCurrentWindow();
             if (appWindow != null)
             {
                 appWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "logo.ico"));
                 appWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
-            }
+                appWindow.TitleBar.ButtonBackgroundColor = Microsoft.UI.Colors.Transparent;
+                appWindow.TitleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
 
-            // Sync the title bar caption buttons to match the current theme
-            SetTitleBarButtonColors();
-            RootGrid.ActualThemeChanged += (s, e) => SetTitleBarButtonColors();
-        }
-
-        private void SetTitleBarButtonColors()
-        {
-            AppWindow appWindow = GetAppWindowForCurrentWindow();
-            if (appWindow != null && AppWindowTitleBar.IsCustomizationSupported())
-            {
-                var titleBar = appWindow.TitleBar;
-                titleBar.ButtonBackgroundColor = Microsoft.UI.Colors.Transparent;
-                titleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
-
-                if (RootGrid.ActualTheme == ElementTheme.Dark)
+                void UpdateTitleBarColors()
                 {
-                    titleBar.ButtonForegroundColor = Microsoft.UI.Colors.White;
-                    titleBar.ButtonHoverForegroundColor = Microsoft.UI.Colors.White;
-                    titleBar.ButtonHoverBackgroundColor = Windows.UI.Color.FromArgb(25, 255, 255, 255);
-                    titleBar.ButtonPressedForegroundColor = Microsoft.UI.Colors.White;
-                    titleBar.ButtonPressedBackgroundColor = Windows.UI.Color.FromArgb(51, 255, 255, 255);
-                    titleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(255, 120, 120, 120);
+                    appWindow.TitleBar.ButtonForegroundColor = RootGrid.ActualTheme == ElementTheme.Dark ? Microsoft.UI.Colors.White : Microsoft.UI.Colors.Black;
+                    appWindow.TitleBar.ButtonHoverForegroundColor = RootGrid.ActualTheme == ElementTheme.Dark ? Microsoft.UI.Colors.White : Microsoft.UI.Colors.Black;
                 }
-                else
+                RootGrid.ActualThemeChanged += (s, e) => UpdateTitleBarColors();
+                UpdateTitleBarColors();
+
+                // Maximize the window
+                if (appWindow.Presenter is OverlappedPresenter presenter)
                 {
-                    titleBar.ButtonForegroundColor = Microsoft.UI.Colors.Black;
-                    titleBar.ButtonHoverForegroundColor = Microsoft.UI.Colors.Black;
-                    titleBar.ButtonHoverBackgroundColor = Windows.UI.Color.FromArgb(25, 0, 0, 0);
-                    titleBar.ButtonPressedForegroundColor = Microsoft.UI.Colors.Black;
-                    titleBar.ButtonPressedBackgroundColor = Windows.UI.Color.FromArgb(51, 0, 0, 0);
-                    titleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(255, 130, 130, 130);
+                    presenter.Maximize();
+
+                    // Set minimum window size
+                    presenter.PreferredMinimumWidth = 840;
+                    presenter.PreferredMinimumHeight = 500;
                 }
             }
+
         }
+
+
 
         private AppWindow GetAppWindowForCurrentWindow()
         {
@@ -108,14 +116,7 @@ namespace BlendHub
         // NavigationView events
         private void NavView_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
         {
-            if (sender.PaneDisplayMode == NavigationViewPaneDisplayMode.Top)
-            {
-                AppTitleBar.IsPaneToggleButtonVisible = false;
-            }
-            else
-            {
-                AppTitleBar.IsPaneToggleButtonVisible = true;
-            }
+            AppTitleBar.IsPaneToggleButtonVisible = false;
         }
 
         private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
@@ -125,28 +126,82 @@ namespace BlendHub
             {
                 if (e.SourcePageType == item.Value)
                 {
-                    NavView.SelectedItem = NavView.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => i.Tag?.ToString() == item.Key);
+                    // Find in MenuItems or FooterMenuItems
+                    var menuItem = NavView.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => i.Tag?.ToString() == item.Key)
+                                ?? NavView.FooterMenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => i.Tag?.ToString() == item.Key);
+                    
+                    NavView.SelectedItem = menuItem;
                     break;
                 }
             }
-            if (e.SourcePageType == typeof(SettingsPage))
-                NavView.SelectedItem = NavView.SettingsItem;
+
+            // Pass window handle to pages that need it for file pickers/dialogs
+            if (e.Content is BlendHub.ReferenceBoard.ReferenceBoard boardPage)
+            {
+                boardPage.WindowHandle = WindowNative.GetWindowHandle(this);
+            }
         }
 
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
-            if (args.IsSettingsSelected)
-            {
-                Navigate(typeof(SettingsPage));
-                return;
-            }
-
             if (args.SelectedItem is NavigationViewItem item && item.Tag != null)
             {
                 var tag = item.Tag.ToString();
                 if (_navigationMap.TryGetValue(tag ?? "", out var targetPage))
                 {
                     Navigate(targetPage);
+                }
+                
+                UpdateNavigationViewIcons(item);
+            }
+        }
+
+        private void UpdateNavigationViewIcons(NavigationViewItem selectedItem)
+        {
+            foreach (var menuItem in NavView.MenuItems.OfType<NavigationViewItem>())
+            {
+                SetItemIconState(menuItem, false);
+            }
+            foreach (var menuItem in NavView.FooterMenuItems.OfType<NavigationViewItem>())
+            {
+                SetItemIconState(menuItem, false);
+            }
+            
+            if (selectedItem != null)
+            {
+                SetItemIconState(selectedItem, true);
+            }
+        }
+
+        private void SetItemIconState(NavigationViewItem item, bool isSelected)
+        {
+            if (item.Icon is PathIcon pathIcon)
+            {
+                string? tag = item.Tag?.ToString();
+                string? iconName = tag switch
+                {
+                    "home" => "home",
+                    "project" => "project",
+                    "referenceboard" => "reference_board",
+                    "download" => "download",
+                    "addons" => "addons",
+                    "backup" => "backup",
+                    "restore" => "restore",
+                    "sync" => "sync",
+                    "feedback" => "feedback",
+                    "settings" => "settings",
+                    _ => null
+                };
+
+                if (iconName != null)
+                {
+                    string state = (isSelected && iconName != "feedback") ? "filled" : "outline";
+                    string resourceKey = $"{iconName}_{state}";
+                    
+                    if (Application.Current.Resources.TryGetValue(resourceKey, out object geometryString))
+                    {
+                        pathIcon.Data = (Microsoft.UI.Xaml.Media.Geometry)Microsoft.UI.Xaml.Markup.XamlBindingHelper.ConvertValue(typeof(Microsoft.UI.Xaml.Media.Geometry), geometryString);
+                    }
                 }
             }
         }
@@ -163,144 +218,41 @@ namespace BlendHub
 
         private async void ShowFeedbackDialog()
         {
-            var dialog = new ContentDialog
+            var dialog = new BlendHub.Dialogs.FeedbackDialog
             {
-                Title = "Feedback",
                 XamlRoot = this.Content.XamlRoot,
                 Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
-                RequestedTheme = (this.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default,
-                Width = 380
+                RequestedTheme = (this.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default
             };
-
-            // Create content layout
-            var contentPanel = new StackPanel { Spacing = 16, Width = 340 };
-
-            // Button grid
-            var buttonGrid = new Grid
-            {
-                ColumnDefinitions =
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }
-                },
-                ColumnSpacing = 8
-            };
-
-            // Feature Request button
-            var featureBtn = new Button
-            {
-                Content = new FontIcon { Glyph = "\uEA80", FontSize = 20 },
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Padding = new Thickness(12)
-            };
-            ToolTipService.SetToolTip(featureBtn, "Feature Request");
-            Grid.SetColumn(featureBtn, 0);
-
-            // Bug Report button
-            var bugBtn = new Button
-            {
-                Content = new FontIcon { Glyph = "\uEBE8", FontSize = 20 },
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Padding = new Thickness(12)
-            };
-            ToolTipService.SetToolTip(bugBtn, "Bug Report");
-            Grid.SetColumn(bugBtn, 1);
-
-            // Question button
-            var questionBtn = new Button
-            {
-                Content = new FontIcon { Glyph = "\uE897", FontSize = 20 },
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Padding = new Thickness(12)
-            };
-            ToolTipService.SetToolTip(questionBtn, "Question");
-            Grid.SetColumn(questionBtn, 2);
-
-            // Discussion button
-            var discussionBtn = new Button
-            {
-                Content = new FontIcon { Glyph = "\uE8BD", FontSize = 20 },
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Padding = new Thickness(12)
-            };
-            ToolTipService.SetToolTip(discussionBtn, "Discussion");
-            Grid.SetColumn(discussionBtn, 3);
-
-            buttonGrid.Children.Add(featureBtn);
-            buttonGrid.Children.Add(bugBtn);
-            buttonGrid.Children.Add(questionBtn);
-            buttonGrid.Children.Add(discussionBtn);
-
-            // Email text box with copy button
-            var emailGrid = new Grid
-            {
-                ColumnDefinitions =
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = GridLength.Auto }
-                },
-                ColumnSpacing = 8
-            };
-
-            var emailTextBox = new TextBox
-            {
-                Text = "blendhub.app@gmail.com",
-                IsReadOnly = true,
-                FontSize = 14,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                MinHeight = 32
-            };
-            Grid.SetColumn(emailTextBox, 0);
-
-            var copyBtn = new Button
-            {
-                Content = new FontIcon { Glyph = "\uE8C8", FontSize = 16 },
-                Padding = new Thickness(6, 0, 6, 0),
-                Height = 32,
-                VerticalAlignment = VerticalAlignment.Stretch
-            };
-            ToolTipService.SetToolTip(copyBtn, "Copy email address");
-            copyBtn.Click += async (s, e) =>
-            {
-                var dataPackage = new Windows.ApplicationModel.DataTransfer.DataPackage();
-                dataPackage.SetText("blendhub.app@gmail.com");
-                Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dataPackage);
-                
-                // Change icon to checkmark for feedback
-                var originalIcon = copyBtn.Content as FontIcon;
-                if (originalIcon != null)
-                {
-                    originalIcon.Glyph = "\uE73E"; // Checkmark icon
-                    
-                    // Wait for 1 second then restore original icon
-                    await System.Threading.Tasks.Task.Delay(1000);
-                    originalIcon.Glyph = "\uE8C8"; // Copy icon
-                }
-            };
-            Grid.SetColumn(copyBtn, 1);
-
-            emailGrid.Children.Add(emailTextBox);
-            emailGrid.Children.Add(copyBtn);
-
-            // Description
-            var descriptionText = new TextBlock
-            {
-                Text = "For any question, new feature request, suggestion or bug report, please send a message at the above email address.",
-                TextWrapping = TextWrapping.Wrap,
-                FontSize = 13,
-                Foreground = Application.Current.Resources["TextFillColorSecondaryBrush"] as Microsoft.UI.Xaml.Media.Brush
-            };
-
-            contentPanel.Children.Add(buttonGrid);
-            contentPanel.Children.Add(emailGrid);
-            contentPanel.Children.Add(descriptionText);
-
-            dialog.Content = contentPanel;
-            dialog.CloseButtonText = "Close";
 
             await dialog.ShowAsync();
+        }
+
+        // Splash Screen Helpers
+        public void ShowSplashScreen()
+        {
+            _splashPage = new Pages.SplashScreenPage();
+            this.Content = _splashPage;
+        }
+
+        public void RestoreMainContent()
+        {
+            this.Content = _mainContent;
+            _splashPage = null;
+
+            // Re-apply title bar since content changed
+            this.SetTitleBar(AppTitleBar);
+
+            // Navigate to default page now that startup/version checking tasks are fully complete
+            var defaultPage = Services.AppSettingsService.Instance.Settings.DefaultPage;
+            var itemToSelect = NavView.MenuItems.OfType<NavigationViewItem>()
+                                .FirstOrDefault(i => i.Tag?.ToString() == defaultPage) ?? HomeItem;
+            NavView.SelectedItem = itemToSelect;
+        }
+
+        public void UpdateSplashStatus(string status, double? progress = null)
+        {
+            _splashPage?.UpdateStatus(status, progress);
         }
 
         // Navigation helper for quick access

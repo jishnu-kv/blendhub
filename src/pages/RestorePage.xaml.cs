@@ -1,16 +1,12 @@
+using BlendHub.Models;
+using BlendHub.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
-using Windows.Storage.Pickers;
-using BlendHub.Services;
-using BlendHub.Models;
-using BlendHub.Helpers;
 
 namespace BlendHub.Pages
 {
@@ -18,12 +14,12 @@ namespace BlendHub.Pages
     {
         private readonly BlenderSettingsService _blenderService = new();
         private ObservableCollection<ConfigItemViewModel> _restoreItems = new();
+        private string _backupVersion = string.Empty;
 
         public RestorePage()
         {
             this.InitializeComponent();
-            this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
-            ItemsListView.ItemsSource = _restoreItems;
+
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -121,7 +117,7 @@ namespace BlendHub.Pages
                         WarningInfoBar.Title = "No Target Selected";
                         WarningInfoBar.Message = "Please select a target Blender version.";
                     }
-                    
+
                     WarningInfoBar.Severity = InfoBarSeverity.Warning;
                     WarningInfoBar.IsClosable = true;
                     WarningInfoBar.IsOpen = true;
@@ -151,6 +147,15 @@ namespace BlendHub.Pages
         private void RefreshItems(string backupName)
         {
             _restoreItems.Clear();
+            _backupVersion = string.Empty;
+
+            // Extract version from backup name (Format: Name_Version)
+            int lastUnderscore = backupName.LastIndexOf('_');
+            if (lastUnderscore != -1)
+            {
+                _backupVersion = backupName.Substring(lastUnderscore + 1);
+            }
+
             var backupRoot = Path.Combine(AppSettingsService.Instance.Settings.BackupDirectory, backupName);
             var items = _blenderService.GetDefaultBackupItems(backupRoot);
             foreach (var item in items)
@@ -160,7 +165,8 @@ namespace BlendHub.Pages
                     Name = item.Name,
                     IsEnabled = item.IsEnabled,
                     IsExists = item.Exists,
-                    TooltipText = item.Tooltip, // Pass tooltip info
+                    TooltipText = item.Category,
+                    Category = item.Category,
                     RelativePath = item.RelativePath,
                     IsFolder = item.IsFolder
                 };
@@ -168,7 +174,30 @@ namespace BlendHub.Pages
                 _restoreItems.Add(vm);
             }
 
+            // Group by category and update view
+            var groups = _restoreItems
+                .GroupBy(i => i.Category)
+                .OrderBy(g => GetCategoryOrder(g.Key))
+                .Select(g => new CategoryGroup
+                {
+                    Key = g.Key,
+                    Items = g.ToList()
+                })
+                .ToList();
+
+            GroupedRestoreItems.Source = groups;
             ValidateRestoreState();
+        }
+
+        private int GetCategoryOrder(string category)
+        {
+            return category switch
+            {
+                "Extensions & Tools" => 1,
+                "Preferences & Configuration" => 2,
+                "History & Recent Data" => 3,
+                _ => 99
+            };
         }
 
         private async void StartRestoreButton_Click(object sender, RoutedEventArgs e)
@@ -204,7 +233,26 @@ namespace BlendHub.Pages
                 return;
             }
 
+            // Version mismatch check (New to Old)
             var enabledItems = _restoreItems.Where(i => i.IsEnabled).ToList();
+            bool hasCriticalItems = enabledItems.Any(i => i.Name == "Preferences" || i.Name == "Startup File");
+
+            if (hasCriticalItems && !string.IsNullOrEmpty(_backupVersion) && IsVersionNewer(_backupVersion, targetInfo.Version))
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = "Version Mismatch Warning",
+                    Content = $"You are restoring settings from a newer version ({_backupVersion}) to an older version ({targetInfo.Version}).\n\nRestoring Preferences or Startup Files from a newer version can cause UI glitches or crashes in older Blender versions.\n\nDo you want to continue?",
+                    PrimaryButtonText = "Restore Anyway",
+                    SecondaryButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Secondary,
+                    XamlRoot = this.XamlRoot
+                };
+
+                if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+                    return;
+            }
+
             if (enabledItems.Count == 0)
             {
                 WarningInfoBar.Title = "No Items Selected";
@@ -259,6 +307,17 @@ namespace BlendHub.Pages
             }
         }
 
+        private bool IsVersionNewer(string version1, string version2)
+        {
+            // Simple comparison for Blender versions (e.g. 4.1 vs 3.6)
+            if (double.TryParse(version1, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var v1) &&
+                double.TryParse(version2, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var v2))
+            {
+                return v1 > v2;
+            }
+            return string.Compare(version1, version2, StringComparison.OrdinalIgnoreCase) > 0;
+        }
+
         private void EnableAllExpanders(bool enable)
         {
             if (ItemsExpander != null)
@@ -274,7 +333,7 @@ namespace BlendHub.Pages
         private void UpdateInfoBarSpacing()
         {
             bool anyOpen = WarningInfoBar.IsOpen || ErrorInfoBar.IsOpen || SuccessInfoBar.IsOpen;
-            InfoBarPanel.Margin = new Thickness(0, 0, 0, anyOpen ? 8 : 0);
+            InfoBarPanel.Margin = new Thickness(24, 0, 24, anyOpen ? 8 : 0);
         }
     }
 }

@@ -1,16 +1,13 @@
+using BlendHub.Models;
+using BlendHub.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Windows.Storage.Pickers;
-using BlendHub.Services;
-using BlendHub.Models;
-using BlendHub.Helpers;
 
 namespace BlendHub.Pages
 {
@@ -25,15 +22,14 @@ namespace BlendHub.Pages
         public BackupPage()
         {
             this.InitializeComponent();
-            this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
-            ItemsListView.ItemsSource = _backupItems;
+
             BackupsListView.ItemsSource = _backups;
 
             // Load settings ensures directory is handled
             var backupDir = AppSettingsService.Instance.Settings.BackupDirectory;
             if (!string.IsNullOrEmpty(backupDir) && !Directory.Exists(backupDir))
                 Directory.CreateDirectory(backupDir);
-            
+
             // Validate initial state
             ValidateBackupState();
         }
@@ -75,17 +71,40 @@ namespace BlendHub.Pages
                     Name = item.Name,
                     IsEnabled = item.IsEnabled,
                     IsExists = item.Exists,
-                    TooltipText = item.Tooltip, // Pass tooltip info
+                    TooltipText = item.Category, // Using Category as Tooltip for now if Tooltip is empty, or just use Category
+                    Category = item.Category,
                     RelativePath = item.RelativePath,
                     IsFolder = item.IsFolder
                 };
                 vm.PropertyChanged += (s, e) => ValidateBackupState();
                 _backupItems.Add(vm);
             }
+
+            // Group by category and update view
+            var groups = _backupItems
+                .GroupBy(i => i.Category)
+                .OrderBy(g => GetCategoryOrder(g.Key))
+                .Select(g => new CategoryGroup
+                {
+                    Key = g.Key,
+                    Items = g.ToList()
+                })
+                .ToList();
+
+            GroupedBackupItems.Source = groups;
             ValidateBackupState();
         }
 
-
+        private int GetCategoryOrder(string category)
+        {
+            return category switch
+            {
+                "Extensions & Tools" => 1,
+                "Preferences & Configuration" => 2,
+                "History & Recent Data" => 3,
+                _ => 99
+            };
+        }
 
         private void ValidateBackupState()
         {
@@ -120,7 +139,7 @@ namespace BlendHub.Pages
                     WarningInfoBar.Message = "You haven't created any backups yet.";
                     WarningInfoBar.IsClosable = false;
                 }
-                
+
                 WarningInfoBar.Severity = InfoBarSeverity.Warning;
                 WarningInfoBar.IsOpen = true;
                 if (SuccessInfoBar != null) SuccessInfoBar.IsOpen = false;
@@ -170,13 +189,13 @@ namespace BlendHub.Pages
             // Create and show backup name dialog
             string defaultName = DateTime.Now.ToString("yyyy-MM-dd_HH-mm");
             string versionName = info.Version;
-            
+
             var nameTextBox = new TextBox
             {
                 PlaceholderText = "YYYY-MM-DD_HH-mm",
                 Text = defaultName
             };
-            
+
             var previewText = new TextBlock
             {
                 Foreground = Application.Current.Resources["TextFillColorSecondaryBrush"] as Microsoft.UI.Xaml.Media.Brush,
@@ -184,7 +203,7 @@ namespace BlendHub.Pages
                 TextWrapping = TextWrapping.Wrap,
                 Text = $"Folder name will be: {defaultName}_{versionName}"
             };
-            
+
             var dialogContent = new StackPanel { Spacing = 12, Margin = new Thickness(0, 12, 0, 0) };
             dialogContent.Children.Add(new TextBlock { Text = "Enter a name for this backup:", TextWrapping = TextWrapping.Wrap });
             dialogContent.Children.Add(nameTextBox);
@@ -208,8 +227,8 @@ namespace BlendHub.Pages
             {
                 var name = nameTextBox.Text.Trim();
                 dialog.IsPrimaryButtonEnabled = !string.IsNullOrWhiteSpace(name);
-                previewText.Text = string.IsNullOrWhiteSpace(name) 
-                    ? $"Folder name will be: {defaultName}_{versionName}" 
+                previewText.Text = string.IsNullOrWhiteSpace(name)
+                    ? $"Folder name will be: {defaultName}_{versionName}"
                     : $"Folder name will be: {name}_{versionName}";
             };
 
@@ -333,15 +352,19 @@ namespace BlendHub.Pages
                 {
                     // Use the existing service logic to check the 10 standard items in this backup folder
                     var trackedItems = _blenderService.GetDefaultBackupItems(backupPath);
-                    
-                    var statusList = new List<string>();
-                    foreach (var item in trackedItems)
-                    {
-                        // Check if item was actually backed up
-                        statusList.Add($"{(item.Exists ? "✓" : "✗")} {item.Name}");
-                    }
 
-                    ItemsInfoTeachingTip.Subtitle = string.Join("\n", statusList);
+                    var vms = trackedItems.Select(item => new ConfigItemViewModel
+                    {
+                        Name = item.Name,
+                        IsEnabled = item.IsEnabled,
+                        IsExists = item.Exists,
+                        TooltipText = item.Category,
+                        Category = item.Category,
+                        RelativePath = item.RelativePath,
+                        IsFolder = item.IsFolder
+                    }).ToList();
+
+                    ItemsInfoTeachingTip.DataContext = vms;
 
                     ItemsInfoTeachingTip.Target = (FrameworkElement)sender;
                     ItemsInfoTeachingTip.IsOpen = true;
@@ -396,7 +419,7 @@ namespace BlendHub.Pages
         private void UpdateInfoBarSpacing()
         {
             bool anyOpen = WarningInfoBar.IsOpen || ErrorInfoBar.IsOpen || SuccessInfoBar.IsOpen;
-            InfoBarPanel.Margin = new Thickness(0, 0, 0, anyOpen ? 8 : 0);
+            InfoBarPanel.Margin = new Thickness(24, 0, 24, anyOpen ? 8 : 0);
         }
     }
 }

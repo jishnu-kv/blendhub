@@ -1,0 +1,115 @@
+<local:BoardItemBase
+    x:Class="BlendHub.ReferenceBoard.TextItemControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:BlendHub.ReferenceBoard"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:community="using:CommunityToolkit.WinUI.Controls"
+    mc:Ignorable="d"
+    UseFloatingToolbar="False">
+
+    <Grid x:Name="RootGrid">
+        <Viewbox x:Name="TextViewbox" Stretch="Uniform">
+            <Border x:Name="TextBorder" Background="#212121" CornerRadius="4" Padding="20,10">
+                <TextBox x:Name="MainTextBox" 
+                         Text="Double click to edit"
+                         BorderThickness="0" 
+                         Background="Transparent"
+                         Foreground="White"
+                         FontSize="24"
+                         FontFamily="Segoe UI"
+                         TextAlignment="Center" 
+                         HorizontalAlignment="Center" 
+                         VerticalAlignment="Center" 
+                         AcceptsReturn="True" 
+                         TextWrapping="NoWrap" 
+                         MinWidth="40"
+                         Padding="4"
+                         IsReadOnly="True"
+                         IsHitTestVisible="False">
+                    <TextBox.Resources>
+                        <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
+                        <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
+                        <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
+                        <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent" />
+                        <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
+                        <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
+                    </TextBox.Resources>
+                </TextBox>
+            </Border>
+        </Viewbox>
+    </Grid>
+
+    <local:BoardItemBase.ItemSpecificToolbarContent>
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <!-- Toolbar row -->
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <!-- Font Family Selection -->
+                <ComboBox x:Name="FontComboBox" Width="140" Height="32" SelectionChanged="FontComboBox_SelectionChanged" VerticalAlignment="Center"/>
+                
+                <!-- Font Style Selection -->
+                <ComboBox x:Name="FontStyleComboBox" Width="100" Height="32" SelectionChanged="FontStyleComboBox_SelectionChanged" VerticalAlignment="Center"/>
+                
+                <AppBarSeparator Margin="4,0" />
+
+                <!-- Text Color Picker -->
+                <Button Width="32" Height="32" Padding="0" ToolTipService.ToolTip="Text Color" Background="Transparent" BorderThickness="0" VerticalAlignment="Center">
+                    <Button.Flyout>
+                        <Flyout>
+                            <ColorPicker x:Name="FontColorPicker" ColorChanged="FontColorPicker_ColorChanged" 
+                                         ColorSpectrumShape="Ring" IsMoreButtonVisible="False" IsColorSliderVisible="True" 
+                                         IsColorChannelTextInputVisible="True" IsHexInputVisible="True" IsAlphaEnabled="True" 
+                                         IsAlphaSliderVisible="True" IsAlphaTextInputVisible="True" Color="White"/>
+                        </Flyout>
+                    </Button.Flyout>
+                    <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{StaticResource IconPathText}" Fill="{ThemeResource TextFillColorPrimaryBrush}" />
+                            </Canvas>
+                        </Viewbox>
+                        <Border x:Name="FontColorPreview" Height="3" Width="18" Background="White" CornerRadius="1.5" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Background Color Picker -->
+                <Button Width="32" Height="32" Padding="0" ToolTipService.ToolTip="Background Color" Background="Transparent" BorderThickness="0" VerticalAlignment="Center">
+                    <Button.Flyout>
+                        <Flyout>
+                            <ColorPicker x:Name="BgColorPicker" ColorChanged="BgColorPicker_ColorChanged" 
+                                         ColorSpectrumShape="Ring" IsMoreButtonVisible="False" IsColorSliderVisible="True" 
+                                         IsColorChannelTextInputVisible="True" IsHexInputVisible="True" IsAlphaEnabled="True" 
+                                         IsAlphaSliderVisible="True" IsAlphaTextInputVisible="True" Color="#212121"/>
+                        </Flyout>
+                    </Button.Flyout>
+                    <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{StaticResource IconPathPaintBucket}" Fill="{ThemeResource TextFillColorPrimaryBrush}" />
+                            </Canvas>
+                        </Viewbox>
+                        <Border x:Name="BgColorPreview" Height="3" Width="18" Background="#212121" CornerRadius="1.5" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <AppBarSeparator Margin="4,0" />
+
+                <!-- Text Alignment -->
+                <community:Segmented x:Name="TextAlignSegmented" SelectionChanged="TextAlignSegmented_SelectionChanged" SelectedIndex="1" 
+                                     VerticalAlignment="Center" MinHeight="32">
+                    <community:SegmentedItem Tag="Left" ToolTipService.ToolTip="Align Left" MinWidth="40" MinHeight="32" Padding="0">
+                        <FontIcon Glyph="&#xE8E4;" FontSize="14" VerticalAlignment="Center" />
+                    </community:SegmentedItem>
+                    <community:SegmentedItem Tag="Center" ToolTipService.ToolTip="Align Center" MinWidth="40" MinHeight="32" Padding="0">
+                        <FontIcon Glyph="&#xE8E3;" FontSize="14" VerticalAlignment="Center" />
+                    </community:SegmentedItem>
+                    <community:SegmentedItem Tag="Right" ToolTipService.ToolTip="Align Right" MinWidth="40" MinHeight="32" Padding="0">
+                        <FontIcon Glyph="&#xE8E2;" FontSize="14" VerticalAlignment="Center" />
+                    </community:SegmentedItem>
+                </community:Segmented>
+            </StackPanel>
+        </StackPanel>
+    </local:BoardItemBase.ItemSpecificToolbarContent>
+
+</local:BoardItemBase>

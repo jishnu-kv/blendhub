@@ -7,6 +7,7 @@ namespace BlendHub.Models
     {
         private string _name;
         private string _label;
+        private bool _isSelected = true;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -14,6 +15,19 @@ namespace BlendHub.Models
         {
             _label = label;
             _name = name;
+        }
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (_isSelected != value)
+                {
+                    _isSelected = value;
+                    OnPropertyChanged();
+                }
+            }
         }
 
         public string Label

@@ -1,11 +1,11 @@
+using BlendHub.Models;
+using Microsoft.Windows.AppNotifications;
+using Microsoft.Windows.AppNotifications.Builder;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.Windows.AppNotifications;
-using Microsoft.Windows.AppNotifications.Builder;
-using System.Diagnostics;
-using BlendHub.Models;
 
 namespace BlendHub.Services
 {

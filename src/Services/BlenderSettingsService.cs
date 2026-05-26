@@ -22,6 +22,7 @@ namespace BlendHub.Services
         public string RelativePath { get; set; } = string.Empty;
         public bool IsFolder { get; set; }
         public bool Exists { get; set; } = true;
+        public string Category { get; set; } = string.Empty;
         public string Tooltip { get; set; } = string.Empty;
     }
 
@@ -39,7 +40,7 @@ namespace BlendHub.Services
         {
             var versions = new List<BlenderVersionInfo>();
             var configRoot = GetBlenderRootPath();
-            var searchPaths = new[] 
+            var searchPaths = new[]
             {
                 @"C:\Program Files\Blender Foundation",
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Steam\steamapps\common\Blender"),
@@ -54,10 +55,10 @@ namespace BlendHub.Services
                     var version = Path.GetFileName(dir);
                     if (char.IsDigit(version[0]))
                     {
-                        var info = new BlenderVersionInfo 
-                        { 
-                            Version = version, 
-                            ConfigPath = dir 
+                        var info = new BlenderVersionInfo
+                        {
+                            Version = version,
+                            ConfigPath = dir
                         };
 
                         // Search for executable across common paths
@@ -65,7 +66,7 @@ namespace BlendHub.Services
                         {
                             if (!Directory.Exists(root)) continue;
 
-                            try 
+                            try
                             {
                                 // Check for direct matches in WindowsApps for Store apps
                                 if (root.Contains("WindowsApps"))
@@ -73,12 +74,12 @@ namespace BlendHub.Services
                                     // Specifically look for folders containing "Blender" and version
                                     var storeDir = Directory.GetDirectories(root)
                                         .FirstOrDefault(d => d.Contains("Blender") && d.Contains(version));
-                                    
+
                                     if (storeDir != null)
                                     {
                                         var exe = Path.Combine(storeDir, "blender.exe");
                                         if (!File.Exists(exe)) exe = Path.Combine(storeDir, "blender-launcher.exe");
-                                        
+
                                         if (File.Exists(exe))
                                         {
                                             info.ExecutablePath = exe;
@@ -94,16 +95,16 @@ namespace BlendHub.Services
                                         // Don't break here, we might find a better versioned one
                                     }
                                 }
-                                else 
+                                else
                                 {
                                     var installDir = Directory.GetDirectories(root)
                                         .FirstOrDefault(d => d.Contains(version) || d.EndsWith("Blender"));
-                                    
+
                                     if (installDir != null)
                                     {
                                         var exe = Path.Combine(installDir, "blender.exe");
                                         if (!File.Exists(exe)) exe = Path.Combine(installDir, "blender-launcher.exe");
-                                        
+
                                         if (File.Exists(exe))
                                         {
                                             info.ExecutablePath = exe;
@@ -111,14 +112,15 @@ namespace BlendHub.Services
                                         }
                                     }
                                 }
-                            } catch { /* Handle permission issues with WindowsApps */ }
+                            }
+                            catch { /* Handle permission issues with WindowsApps */ }
                         }
 
                         versions.Add(info);
                     }
                 }
             }
-            
+
             // Add custom blender paths from settings if they exist and are not already in the list
             var customPaths = AppSettingsService.Instance.Settings.CustomBlenderPaths;
             if (customPaths != null)
@@ -167,16 +169,18 @@ namespace BlendHub.Services
         {
             var items = new List<BackupItem>
             {
-                new BackupItem { Name = "Addons", RelativePath = "scripts/addons", IsFolder = true },
-                new BackupItem { Name = "Extensions", RelativePath = "scripts/extensions", IsFolder = true },
-                new BackupItem { Name = "Modules", RelativePath = "scripts/modules", IsFolder = true },
-                new BackupItem { Name = "Startup File", RelativePath = "config/startup.blend", IsFolder = false },
-                new BackupItem { Name = "Preferences", RelativePath = "config/userpref.blend", IsFolder = false },
-                new BackupItem { Name = "Recent Searches", RelativePath = "config/recent-searches.txt", IsFolder = false },
-                new BackupItem { Name = "Recent Files", RelativePath = "config/recent-files.txt", IsFolder = false },
-                new BackupItem { Name = "Presets", RelativePath = "scripts/presets", IsFolder = true },
-                new BackupItem { Name = "Platform Support", RelativePath = "config/platform_support.txt", IsFolder = false },
-                new BackupItem { Name = "Bookmarks", RelativePath = "config/bookmarks.txt", IsFolder = false }
+                new BackupItem { Name = "Addons", RelativePath = "scripts/addons", IsFolder = true, Category = "Extensions & Tools" },
+                new BackupItem { Name = "Extensions", RelativePath = "scripts/extensions", IsFolder = true, Category = "Extensions & Tools" },
+                new BackupItem { Name = "Modules", RelativePath = "scripts/modules", IsFolder = true, Category = "Extensions & Tools" },
+                new BackupItem { Name = "Presets", RelativePath = "scripts/presets", IsFolder = true, Category = "Extensions & Tools" },
+
+                new BackupItem { Name = "Preferences", RelativePath = "config/userpref.blend", IsFolder = false, Category = "Preferences & Configuration" },
+                new BackupItem { Name = "Startup File", RelativePath = "config/startup.blend", IsFolder = false, Category = "Preferences & Configuration" },
+                new BackupItem { Name = "Platform Support", RelativePath = "config/platform_support.txt", IsFolder = false, Category = "Preferences & Configuration" },
+
+                new BackupItem { Name = "Recent Files", RelativePath = "config/recent-files.txt", IsFolder = false, Category = "History & Recent Data" },
+                new BackupItem { Name = "Recent Searches", RelativePath = "config/recent-searches.txt", IsFolder = false, Category = "History & Recent Data" },
+                new BackupItem { Name = "Bookmarks", RelativePath = "config/bookmarks.txt", IsFolder = false, Category = "History & Recent Data" }
             };
 
             // Set existence state and filter extensions path if it doesn't exist in scripts
@@ -187,7 +191,7 @@ namespace BlendHub.Services
                 {
                     var scriptsExtensions = Path.Combine(versionPath, "scripts/extensions");
                     var rootExtensions = Path.Combine(versionPath, "extensions");
-                    
+
                     if (Directory.Exists(scriptsExtensions))
                     {
                         item.RelativePath = "scripts/extensions";
@@ -232,7 +236,7 @@ namespace BlendHub.Services
             var versionName = Path.GetFileName(versionPath);
             var fullBackupName = $"{backupName}_{versionName}";
             var backupRoot = Path.Combine(destinationPath, fullBackupName);
-            
+
             if (!Directory.Exists(backupRoot))
                 Directory.CreateDirectory(backupRoot);
 
@@ -255,7 +259,7 @@ namespace BlendHub.Services
                     var dstDir = Path.GetDirectoryName(dst);
                     if (dstDir != null && !Directory.Exists(dstDir))
                         Directory.CreateDirectory(dstDir);
-                    
+
                     if (File.Exists(src))
                         File.Copy(src, dst, true);
                 }
@@ -315,7 +319,7 @@ namespace BlendHub.Services
                 // Filter out ignored folders and extensions
                 var relativePath = Path.GetRelativePath(sourceDir, file);
                 var pathParts = relativePath.Split(Path.DirectorySeparatorChar);
-                
+
                 if (pathParts.Any(p => IgnoredFolders.Contains(p))) continue;
                 if (IgnoredExtensions.Contains(Path.GetExtension(file))) continue;
 

@@ -4,23 +4,38 @@ using System.Collections.Generic;
 namespace BlendHub.Models
 {
     public enum ProjectItemType { Note, Todo }
-    
+
     public enum TodoPriority { None, Low, Medium, High }
+    public enum TodoStatus { Todo, InProgress, Completed }
 
     public class ProjectItem : System.ComponentModel.INotifyPropertyChanged
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public ProjectItemType Type { get; set; } = ProjectItemType.Note;
-        
+
+        private string _heading = string.Empty;
+        public string Heading
+        {
+            get => _heading;
+            set { _heading = value; OnPropertyChanged(nameof(Heading)); }
+        }
+
         private string _content = string.Empty;
         public string Content
         {
             get => _content;
             set { _content = value; OnPropertyChanged(nameof(Content)); }
         }
-        
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
-        
+
+        private DateTime? _dueDate = null;
+        public DateTime? DueDate
+        {
+            get => _dueDate;
+            set { _dueDate = value; OnPropertyChanged(nameof(DueDate)); }
+        }
+
         // Todo-specific properties
         private TodoPriority _priority = TodoPriority.Medium;
         public TodoPriority Priority
@@ -29,11 +44,23 @@ namespace BlendHub.Models
             set { _priority = value; OnPropertyChanged(nameof(Priority)); }
         }
 
-        private bool _isCompleted = false;
+        private TodoStatus _status = TodoStatus.Todo;
+        public TodoStatus Status
+        {
+            get => _status;
+            set 
+            { 
+                _status = value; 
+                OnPropertyChanged(nameof(Status)); 
+                OnPropertyChanged(nameof(IsCompleted)); 
+            }
+        }
+
+        [System.Text.Json.Serialization.JsonIgnore]
         public bool IsCompleted
         {
-            get => _isCompleted;
-            set { _isCompleted = value; OnPropertyChanged(nameof(IsCompleted)); }
+            get => _status == TodoStatus.Completed;
+            set => Status = value ? TodoStatus.Completed : TodoStatus.Todo;
         }
 
         public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
@@ -76,7 +103,8 @@ namespace BlendHub.Models
 
         // Static helpers for x:Bind function binding
         public static double GetOpacity(bool exists) => exists ? 1.0 : 0.55;
-        public static Microsoft.UI.Xaml.Visibility GetMissingVisibility(bool exists) => 
+        public static Microsoft.UI.Xaml.Visibility GetMissingVisibility(bool exists) =>
             exists ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
+        public static string FormatDate(DateTime date) => date.ToString("d");
     }
 }

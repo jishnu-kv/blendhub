@@ -1,13 +1,14 @@
+using BlendHub.Models;
+using BlendHub.Pages;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using System;
-using System.Collections.Generic;
+using BlendHub.Controls;
+using BlendHub.Dialogs;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using BlendHub.Models;
-using BlendHub.Pages;
 
 namespace BlendHub.Services
 {
@@ -15,16 +16,16 @@ namespace BlendHub.Services
     {
         public static async Task ShowDeleteConfirmAsync(Project project, XamlRoot xamlRoot, Action? onSuccess = null)
         {
-            var deleteFilesCheckBox = new CheckBox 
-            { 
+            var deleteFilesCheckBox = new CheckBox
+            {
                 Content = "Move project folder and all its contents to Recycle Bin",
                 Margin = new Thickness(0, 12, 0, 0),
                 FontSize = 13
             };
 
             var contentStack = new StackPanel { Spacing = 4, Margin = new Thickness(0, 4, 0, 0) };
-            contentStack.Children.Add(new TextBlock 
-            { 
+            contentStack.Children.Add(new TextBlock
+            {
                 Text = $"Are you sure you want to remove '{project.Name}' from your recent projects? This action will remove it from the list.",
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 14
@@ -54,7 +55,8 @@ namespace BlendHub.Services
                     {
                         if (Directory.Exists(project.Path))
                         {
-                            await Task.Run(() => {
+                            await Task.Run(() =>
+                            {
                                 Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(
                                     project.Path,
                                     Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
@@ -65,7 +67,7 @@ namespace BlendHub.Services
                     catch (Exception ex)
                     {
                         Debug.WriteLine($"[ProjectDialogService] Error moving folder to recycle bin: {ex.Message}");
-                        
+
                         var errorDialog = new ContentDialog
                         {
                             Title = "Deletion Failed",
@@ -81,7 +83,7 @@ namespace BlendHub.Services
 
                 // Remove from data source
                 ProjectService.RemoveProject(project);
-                
+
                 // Callback for UI refresh
                 onSuccess?.Invoke();
             }
@@ -130,3 +132,4 @@ namespace BlendHub.Services
         }
     }
 }
+

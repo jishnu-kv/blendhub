@@ -83,6 +83,18 @@
                     </ComboBox>
                 </controls:SettingsCard>
 
+                <controls:SettingsCard Description="Automatically detect the Blender version used in projects on startup."
+                                       Header="Auto-Detect Project Version"
+                                       HeaderIcon="{ui:FontIcon Glyph=&#xE9F5;}">
+                    <ToggleSwitch x:Name="AutoDetectVersionToggle" VerticalAlignment="Center" Toggled="AutoDetectVersionToggle_Toggled" />
+                </controls:SettingsCard>
+
+                <controls:SettingsCard Description="Automatically expand project folders in the locations tab."
+                                       Header="Expand Folders by Default"
+                                       HeaderIcon="{ui:FontIcon Glyph=&#xE838;}">
+                    <ToggleSwitch x:Name="ExpandFoldersToggle" VerticalAlignment="Center" Toggled="ExpandFoldersToggle_Toggled" />
+                </controls:SettingsCard>
+
                 <!-- General Settings Section -->
                 <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}"
                            Text="General" />
@@ -154,14 +166,33 @@
                 <!-- Default Project Folders Configuration -->
                 <controls:SettingsExpander Header="Default Project Folder Structure"
                                          Description="Configure the default folders created for new projects."
-                                         HeaderIcon="{ui:FontIcon Glyph=&#xE8B7;}"
+                                         HeaderIcon="{ui:FontIcon Glyph=&#xF168;}"
                                          IsExpanded="False"
                                          ItemsSource="{x:Bind DefaultFolders}">
                     <controls:SettingsExpander.ItemTemplate>
                         <DataTemplate x:DataType="models:ProjectFolder">
-                            <controls:SettingsCard CornerRadius="0" Margin="0,-1,0,0">
+                            <controls:SettingsCard CornerRadius="0" Margin="0,-1,0,0"
+                                                   AllowDrop="True"
+                                                   DragOver="SettingsCard_DragOver"
+                                                   Drop="SettingsCard_Drop"
+                                                   DataContext="{x:Bind}">
                                 <controls:SettingsCard.Header>
-                                    <TextBlock Text="{x:Bind Label, Mode=OneWay}" VerticalAlignment="Center" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Grid CanDrag="True"
+                                              DragStarting="Grip_DragStarting"
+                                              Background="Transparent"
+                                              VerticalAlignment="Center"
+                                              Padding="0,0,4,0"
+                                              DataContext="{x:Bind}"
+                                              ToolTipService.ToolTip="Drag to reorder folder">
+                                            <Path Data="M16 17C17.1046 17 18 17.8954 18 19C18 20.1046 17.1046 21 16 21C14.8954 21 14 20.1046 14 19C14 17.8954 14.8954 17 16 17ZM8 17C9.10457 17 10 17.8954 10 19C10 20.1046 9.10457 21 8 21C6.89543 21 6 20.1046 6 19C6 17.8954 6.89543 17 8 17ZM16 10C17.1046 10 18 10.8954 18 12C18 13.1046 17.1046 14 16 14C14.8954 14 14 13.1046 14 12C14 10.8954 14.8954 10 16 10ZM8 10C9.10457 10 10 10.8954 10 12C10 13.1046 9.10457 14 8 14C6.89543 14 6 13.1046 6 12C6 10.8954 6.89543 10 8 10ZM16 3C17.1046 3 18 3.89543 18 5C18 6.10457 17.1046 7 16 7C14.8954 7 14 6.10457 14 5C14 3.89543 14.8954 3 16 3ZM8 3C9.10457 3 10 3.89543 10 5C10 6.10457 9.10457 7 8 7C6.89543 7 6 6.10457 6 5C6 3.89543 6.89543 3 8 3Z" 
+                                                  Fill="{ThemeResource TextFillColorSecondaryBrush}"
+                                                  Width="14" Height="14"
+                                                  Stretch="Uniform"
+                                                  VerticalAlignment="Center" />
+                                        </Grid>
+                                        <TextBlock Text="{x:Bind Label, Mode=OneWay}" VerticalAlignment="Center" />
+                                    </StackPanel>
                                 </controls:SettingsCard.Header>
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                     <TextBox Grid.Column="0" 
@@ -197,7 +228,7 @@
                 <!-- File Type Associations (Launchers) -->
                 <controls:SettingsExpander Header="Default File Launchers"
                                          Description="Set default programs for file types. New projects will automatically use these associations."
-                                         HeaderIcon="{ui:FontIcon Glyph=&#xE71D;}"
+                                         HeaderIcon="{ui:FontIcon Glyph=&#xE7AC;}"
                                          IsExpanded="False"
                                          ItemsSource="{x:Bind Launchers}">
                     <controls:SettingsExpander.ItemTemplate>

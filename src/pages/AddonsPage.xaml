@@ -1,0 +1,448 @@
+<Page
+    x:Class="BlendHub.Pages.AddonsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:BlendHub.Pages"
+    xmlns:services="using:BlendHub.Services"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    xmlns:ui="using:CommunityToolkit.WinUI"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Page.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ms-appx:///CommunityToolkit.WinUI.Controls.SettingsControls/SettingsExpander/SettingsExpander.xaml" />
+                <ResourceDictionary Source="ms-appx:///CommunityToolkit.WinUI.Controls.SettingsControls/SettingsCard/SettingsCard.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <local:AddonTypeToBrushConverter x:Key="AddonTypeToBrushConverter" />
+        </ResourceDictionary>
+    </Page.Resources>
+
+    <Grid Padding="0,24,0,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" /> <!-- Row 0: Header and Actions -->
+            <RowDefinition Height="Auto" /> <!-- Row 1: Tab Menu Switcher -->
+            <RowDefinition Height="Auto" /> <!-- Row 2: Info Bars -->
+            <RowDefinition Height="*" />    <!-- Row 3: Main Body Split Grid -->
+        </Grid.RowDefinitions>
+
+        <!-- Header Section -->
+        <Grid x:Name="HeaderGrid" Grid.Row="0" Margin="24,0,24,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Title and Subtitle -->
+            <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="Blender Addons &amp; Extensions"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               AutomationProperties.HeadingLevel="Level1" />
+                    <StackPanel x:Name="BackgroundUpdatePanel" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Visibility="Collapsed">
+                        <ProgressRing Width="14" Height="14" IsActive="True" />
+                        <TextBlock Text="Syncing with blender.org..." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock Text="Discover, install, and manage your Blender enhancements."
+                           FontSize="14"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+
+            <!-- Header Actions -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <Button x:Name="InstallAddonButton" Click="InstallAddonButton_Click"
+                        Style="{StaticResource AccentButtonStyle}" Padding="14,8" Height="36" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE710;" FontSize="15" />
+                        <TextBlock Text="Install Addon" FontSize="13.5" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Tab Switcher & Search Section -->
+        <Grid Grid.Row="1" Margin="24,0,24,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Tab Switcher Menu -->
+            <controls:Segmented x:Name="TabSegmented" Grid.Column="0"
+                                SelectionChanged="TabSegmented_SelectionChanged" 
+                                SelectedIndex="0" VerticalAlignment="Center" HorizontalAlignment="Left">
+                <controls:SegmentedItem Tag="Installed" Content="Installed" MinWidth="100" />
+                <controls:SegmentedItem Tag="Market" Content="Market" MinWidth="90" />
+            </controls:Segmented>
+
+            <!-- Right: Search Box & Filter Button Flyout -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <TextBox x:Name="SearchBox" Width="260"
+                         PlaceholderText="Search"
+                         TextChanged="FilterCriteriaChanged"
+                         VerticalAlignment="Center" InputScope="Search">
+                </TextBox>
+                
+                <Button x:Name="RefreshButton" Click="RefreshButton_Click" ToolTipService.ToolTip="Refresh" Height="32" Width="32" Padding="0">
+                    <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                </Button>
+
+                <Button x:Name="SortButton" ToolTipService.ToolTip="Sort" Height="32" Width="32" Padding="0">
+                    <FontIcon Glyph="&#xE8CB;" FontSize="14" />
+                    <Button.Flyout>
+                        <MenuFlyout Placement="Bottom">
+                            <RadioMenuFlyoutItem x:Name="SortNameAsc" Text="Name (A-Z)" GroupName="SortGroup" IsChecked="True" Click="SortCriteriaChanged"/>
+                            <RadioMenuFlyoutItem x:Name="SortNameDesc" Text="Name (Z-A)" GroupName="SortGroup" Click="SortCriteriaChanged"/>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+
+                <Button x:Name="FilterButton" ToolTipService.ToolTip="Filters" Height="32" Width="32" Padding="0">
+                    <FontIcon Glyph="&#xE71C;" FontSize="14" />
+                    <Button.Flyout>
+                        <MenuFlyout Placement="Bottom">
+                            <MenuFlyoutSubItem x:Name="VersionFilterSubItem" Text="Blender Version">
+                                <!-- Dynamically populated in C# -->
+                            </MenuFlyoutSubItem>
+                            <MenuFlyoutSubItem x:Name="TypeFilterSubItem" Text="Addon Type">
+                                <RadioMenuFlyoutItem x:Name="TypeFilterAll" Text="All Types" GroupName="TypeGroup" IsChecked="True" Click="FilterCriteriaChanged"/>
+                                <RadioMenuFlyoutItem x:Name="TypeFilterExtension" Text="Extensions" GroupName="TypeGroup" Click="FilterCriteriaChanged"/>
+                                <RadioMenuFlyoutItem x:Name="TypeFilterLegacy" Text="Legacy Addons" GroupName="TypeGroup" Click="FilterCriteriaChanged"/>
+                            </MenuFlyoutSubItem>
+                            <MenuFlyoutSubItem x:Name="CategoryFilterSubItem" Text="Category">
+                                <!-- Dynamically populated in C# -->
+                            </MenuFlyoutSubItem>
+                            <MenuFlyoutSubItem x:Name="RepositoryFilterSubItem" Text="Repository">
+                                <!-- Dynamically populated in C# -->
+                            </MenuFlyoutSubItem>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Info Bars Panel -->
+        <StackPanel x:Name="InfoBarPanel" Grid.Row="2" Spacing="4" Margin="24,0,24,8">
+            <InfoBar x:Name="SuccessInfoBar" IsOpen="False" IsClosable="True" Severity="Success"
+                     Title="Success" Message="" Closed="InfoBar_Closed" />
+            <InfoBar x:Name="WarningInfoBar" IsOpen="False" IsClosable="True" Severity="Warning"
+                     Title="Warning" Message="" Closed="InfoBar_Closed" />
+            <InfoBar x:Name="ErrorInfoBar" IsOpen="False" IsClosable="True" Severity="Error"
+                     Title="Error" Message="" Closed="InfoBar_Closed" />
+        </StackPanel>
+
+        <!-- Main Body split layout (Grid of Cards and Details) -->
+        <Grid Grid.Row="3" ColumnDefinitions="*,1,420" Margin="24,0,12,24" ColumnSpacing="12">
+
+            <!-- Left Side: Addons Grid -->
+            <Grid Grid.Column="0">
+                <ItemsView x:Name="AddonsListView" 
+                           SelectionChanged="AddonsListView_SelectionChanged"
+                           Padding="0,0,12,0">
+                    <ItemsView.Layout>
+                        <UniformGridLayout ItemsStretch="Fill" 
+                                           MinItemWidth="250" 
+                                           MinItemHeight="130" 
+                                           MinColumnSpacing="12" 
+                                           MinRowSpacing="12"/>
+                    </ItemsView.Layout>
+
+                    <ItemsView.ItemTemplate>
+                        <DataTemplate x:DataType="services:AddonItem">
+                            <ItemContainer>
+                                <!-- Info-Rich Grid Style Card -->
+                                <Grid Height="130" Padding="20"
+                                      Background="{ThemeResource ControlOnImageFillColorDefaultBrush}"
+                                      BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                      BorderThickness="1" CornerRadius="4"
+                                      RowDefinitions="Auto,*,Auto">
+
+                                    <!-- Row 0: Name -->
+                                    <TextBlock Grid.Row="0" Text="{x:Bind Name}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,4"
+                                               MaxLines="1" TextTrimming="CharacterEllipsis"
+                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+
+                                    <!-- Row 1: Tagline / Description -->
+                                    <TextBlock Grid.Row="1" Text="{x:Bind Description}" FontSize="10.5"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               MaxLines="3" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" Margin="0,0,0,4" />
+
+                                    <!-- Row 2: Footer showing Author & Version Badge -->
+                                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                            <FontIcon Glyph="&#xE77B;" FontSize="9.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{x:Bind Author}" FontSize="9.5"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                                       TextTrimming="CharacterEllipsis" MaxWidth="180" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <Border Grid.Column="1" CornerRadius="4" Padding="6,2" Margin="8,0,0,0"
+                                                Background="{x:Bind Type, Converter={StaticResource AddonTypeToBrushConverter}}" 
+                                                VerticalAlignment="Center">
+                                            <TextBlock Text="{x:Bind Version}" FontSize="9" FontWeight="SemiBold" Foreground="White" />
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </ItemContainer>
+                        </DataTemplate>
+                    </ItemsView.ItemTemplate>
+                </ItemsView>
+
+                <!-- Empty State -->
+                <StackPanel x:Name="EmptyStatePanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+                    <FontIcon Glyph="&#xE7FC;" FontSize="48" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="No Addons or Extensions found." FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                    <TextBlock Text="Try changing your search terms or filters above." FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Vertical Separator -->
+            <Border Grid.Column="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+            <!-- Right Side: Details Panel -->
+            <Grid Grid.Column="2">
+                <Grid>
+                    <!-- Detail Display -->
+                    <Grid x:Name="DetailsGrid" Visibility="Visible" RowDefinitions="Auto,*,Auto">
+                        <!-- 1. Header & Close Button -->
+                        <Grid Grid.Row="0" Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0" Spacing="8" HorizontalAlignment="Left">
+                                <TextBlock x:Name="DetailName" FontSize="24" FontWeight="Bold" HorizontalAlignment="Left" TextAlignment="Left" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                
+                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Left">
+                                    <FontIcon Glyph="&#xE77B;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="DetailAuthorText" FontSize="12.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+
+                                <TextBlock x:Name="DetailTagline" FontSize="13.5" HorizontalAlignment="Left" TextAlignment="Left" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,4" />
+                            </StackPanel>
+
+                        </Grid>
+                        <MenuFlyoutSeparator Grid.Row="0" VerticalAlignment="Bottom" Margin="0,0,0,12"/>
+
+                        <!-- 2. Scrollable Structured Properties -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,16" Padding="0,0,12,0">
+                            <StackPanel Spacing="16">
+                                <!-- Section A: Compatibility Checkmarks -->
+                                <Border x:Name="CompatibilityCard" Background="{ThemeResource ControlOnImageFillColorDefaultBrush}" 
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" CornerRadius="6" Padding="14">
+                                    <StackPanel Spacing="10">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE770;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Text="Compatibility" FontSize="13.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                        </StackPanel>
+                                        
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,0,0,0">
+                                            <Border x:Name="DetailCompatibilityBadge" CornerRadius="4" Padding="8,3" Background="Green">
+                                                <TextBlock x:Name="DetailCompatibilityBadgeText" Text="Compatible" FontSize="11" FontWeight="SemiBold" Foreground="White" />
+                                            </Border>
+                                            <FontIcon x:Name="DetailCompatibilityIcon" Glyph="&#xE73E;" FontSize="14" Foreground="Green" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="DetailCompatibilityText" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="4,0,0,0" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Section B: Security & Permissions Alert Card -->
+                                <Border x:Name="PropPermissionsPanel" Background="{ThemeResource ControlOnImageFillColorDefaultBrush}" 
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" CornerRadius="6" Padding="14">
+                                    <StackPanel Spacing="10">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE727;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Text="Permissions" FontSize="13.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                        </StackPanel>
+                                        
+                                        <!-- Dynamic Badges -->
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,0,0,0">
+                                            <!-- Safe Shield / No Permissions -->
+                                            <Border x:Name="PermNoPermissionsBadge" CornerRadius="4" Padding="8,3" Background="Green" Visibility="Collapsed">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <FontIcon Glyph="&#xE727;" FontSize="11" Foreground="White" VerticalAlignment="Center" />
+                                                    <TextBlock Text="No permissions required" FontSize="11" FontWeight="SemiBold" Foreground="White" />
+                                                </StackPanel>
+                                            </Border>
+                                            
+                                            <!-- Network Access -->
+                                            <Border x:Name="PermNetworkBadge" CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemControlBackgroundAccentBrush}" Visibility="Collapsed">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <FontIcon Glyph="&#xE774;" FontSize="11" Foreground="White" VerticalAlignment="Center" />
+                                                    <TextBlock Text="Network Access" FontSize="11" FontWeight="SemiBold" Foreground="White" />
+                                                </StackPanel>
+                                            </Border>
+                                            
+                                            <!-- Disk Access -->
+                                            <Border x:Name="PermFilesBadge" CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemControlBackgroundAccentBrush}" Visibility="Collapsed">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <FontIcon Glyph="&#xE8B7;" FontSize="11" Foreground="White" VerticalAlignment="Center" />
+                                                    <TextBlock Text="Disk/File Access" FontSize="11" FontWeight="SemiBold" Foreground="White" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Clipboard Access -->
+                                            <Border x:Name="PermClipboardBadge" CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemControlBackgroundAccentBrush}" Visibility="Collapsed">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <FontIcon Glyph="&#xE8C8;" FontSize="11" Foreground="White" VerticalAlignment="Center" />
+                                                    <TextBlock Text="Clipboard Access" FontSize="11" FontWeight="SemiBold" Foreground="White" />
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                        
+                                        <TextBlock x:Name="PropPermissions" FontSize="11.5" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="4,4,0,0" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Section C: Repository & Metadata -->
+                                <Border Background="{ThemeResource ControlOnImageFillColorDefaultBrush}" 
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" CornerRadius="6" Padding="14">
+                                    <StackPanel Spacing="12">
+                                        <!-- Repository Pill Row -->
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                                <FontIcon Glyph="&#xE909;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                <TextBlock Text="Repository" FontSize="13.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                            </StackPanel>
+                                            <Border Grid.Column="1" CornerRadius="12" Padding="10,3" Background="{ThemeResource SystemControlBackgroundBaseLowBrush}">
+                                                <TextBlock x:Name="DetailRepoCardText" FontSize="11.5" FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Center" />
+                                            </Border>
+                                        </Grid>
+                                        
+                                        <MenuFlyoutSeparator />
+                                        
+                                        <!-- Version & Metadata -->
+                                        <StackPanel Spacing="8">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon Glyph="&#xE90A;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                <TextBlock Text="Metadata" FontSize="13.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                            </StackPanel>
+                                            
+                                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="12" Margin="4,2,0,0">
+                                                <!-- Row 0: Version -->
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Version:" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                                    <Border CornerRadius="4" Padding="6,2" Background="Teal">
+                                                        <TextBlock x:Name="DetailHistoryCurrent" FontSize="10.5" FontWeight="SemiBold" Foreground="White" />
+                                                    </Border>
+                                                </StackPanel>
+                                                
+                                                <!-- Row 1: Archive Size -->
+                                                <TextBlock Grid.Row="1" Grid.Column="0" x:Name="DetailSizeLabel" Text="Size:" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="DetailSizeText" FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Section D: Installation Path Box -->
+                                <Border x:Name="PropPathPanel" Background="{ThemeResource ControlOnImageFillColorDefaultBrush}" 
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                        BorderThickness="1" CornerRadius="6" Padding="14">
+                                    <StackPanel Spacing="8">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE8DA;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Text="Installation Path" FontSize="13.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                        </StackPanel>
+                                        
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                            <Border Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                                    BorderThickness="1" CornerRadius="6" Padding="10">
+                                                <TextBlock x:Name="PropPath" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontFamily="Consolas" FontSize="11" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                            </Border>
+                                            <Button Grid.Column="1" Click="CopyPathButton_Click" Height="36" Width="36" Padding="0" ToolTipService.ToolTip="Copy Path">
+                                                <FontIcon Glyph="&#xE8C8;" FontSize="14" />
+                                            </Button>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- 3. Bottom Actions Panel -->
+                        <StackPanel Grid.Row="2" Spacing="8" Margin="0,8,0,0">
+                            <!-- Online Actions -->
+                            <Grid x:Name="OnlineActionsGrid" ColumnDefinitions="*,*" ColumnSpacing="8" Visibility="Collapsed">
+                                <Button x:Name="DownloadInstallButton" Grid.Column="0" Click="DownloadInstallButton_Click" 
+                                        Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Stretch" Height="36">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE896;" FontSize="14" />
+                                        <TextBlock Text="Download" />
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="WebsiteButton" Grid.Column="1" Click="WebsiteButton_Click" HorizontalAlignment="Stretch" Height="36">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE71B;" FontSize="14" />
+                                        <TextBlock Text="Visit Website" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <!-- Local Actions -->
+                            <StackPanel x:Name="LocalActionsGrid" Spacing="8" Visibility="Visible">
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <Button x:Name="OpenFolderButton" Grid.Column="0" Click="OpenFolderButton_Click" HorizontalAlignment="Stretch" Height="36">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE8DA;" FontSize="14" />
+                                            <TextBlock Text="Open Folder" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="SharedWebsiteButton" Grid.Column="1" Click="WebsiteButton_Click" HorizontalAlignment="Stretch" Height="36">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE71B;" FontSize="14" />
+                                            <TextBlock Text="Website" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <Button x:Name="CheckUpdatesButton" Click="CheckUpdatesButton_Click" Grid.Column="0" HorizontalAlignment="Stretch" Height="36">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                                            <TextBlock Text="Check for Updates" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="UninstallButton" Grid.Column="1" Click="UninstallButton_Click" Height="36" HorizontalAlignment="Stretch"
+                                            Background="Transparent" BorderBrush="{ThemeResource SystemControlErrorTextForegroundBrush}"
+                                            Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                                            <TextBlock Text="Uninstall" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Unselected State -->
+                    <StackPanel x:Name="NoSelectionPanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+                        <FontIcon Glyph="&#xE9B9;" FontSize="48" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="No Addon Selected" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <TextBlock Text="Select an addon from the list to view details and perform actions." FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" MaxWidth="280" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- Loading / Progress Overlay -->
+        <Grid x:Name="ProgressOverlay" Grid.Row="0" Grid.RowSpan="4"
+              Background="{ThemeResource SmokeFillColorDefaultBrush}"
+              Visibility="Collapsed"
+              HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                <ProgressRing x:Name="ProgressOverlayRing" Width="48" Height="48" IsActive="True" />
+                <TextBlock x:Name="ProgressOverlayText" Text="Loading Extensions..." FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

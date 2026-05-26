@@ -13,7 +13,8 @@
                            Opacity="{x:Bind models:Project.GetOpacity(Project.FolderExists)}"
                            IsActionIconVisible="False"
                            IsClickEnabled="True"
-                           Click="Card_Click">
+                           Click="Card_Click"
+                           CornerRadius="8">
         <toolkit:SettingsCard.Header>
             <Grid ColumnSpacing="16">
                 <Grid.ColumnDefinitions>
@@ -35,38 +36,62 @@
                         Background="{ThemeResource SystemFillColorNeutralBackgroundBrush}">
                     <Image x:Name="ThumbnailImage"
                            Loaded="Thumbnail_Loaded"
-                           Source="/Assets/blender_logo.png"
                            Stretch="Uniform" />
                 </Border>
 
-                <!-- Project Name -->
-                <TextBlock Grid.Column="1"
-                           Grid.Row="0"
-                           Text="{x:Bind Project.Name, Mode=OneWay}"
-                           FontSize="16"
-                           FontWeight="SemiBold"
-                           VerticalAlignment="Center" />
-
-                <!-- Project Info -->
+                <!-- Project Name & Error Badge -->
                 <StackPanel Grid.Column="1"
-                            Grid.Row="1"
+                            Grid.Row="0"
                             Orientation="Horizontal"
-                            Spacing="12"
+                            Spacing="8"
                             VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind Project.Path, Mode=OneWay}"
+                    <TextBlock Text="{x:Bind Project.Name, Mode=OneWay}"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="{x:Bind Project.StatusText, Mode=OneWay}"
+                               FontSize="12"
+                               Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
+                               FontWeight="Normal"
+                               VerticalAlignment="Center"
+                               Visibility="{x:Bind models:Project.GetMissingVisibility(Project.FolderExists), Mode=OneWay}" />
+                </StackPanel>
+
+                <!-- Project Info Grid -->
+                <Grid Grid.Column="1"
+                      Grid.Row="1"
+                      ColumnSpacing="16"
+                      VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0"
+                               Text="{x:Bind Project.Path, Mode=OneWay}"
                                FontSize="12"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               TextTrimming="CharacterEllipsis" />
-                    <StackPanel Orientation="Horizontal" Spacing="4">
-                        <FontIcon Glyph="&#xE925;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="{x:Bind Project.BlenderVersion, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="4"
+                                VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE925;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="{x:Bind Project.BlenderVersion, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                     </StackPanel>
-                    <TextBlock Text="{x:Bind Project.CreatedAt, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
+
+                    <TextBlock Grid.Column="2"
+                               Text="{x:Bind models:Project.FormatDate(Project.CreatedAt), Mode=OneWay}"
+                               FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               VerticalAlignment="Center" />
+                </Grid>
             </Grid>
         </toolkit:SettingsCard.Header>
 
-        <!-- Action Buttons -->
         <!-- Action Buttons -->
         <local:BlenderLaunchButton Project="{x:Bind Project}"
                                      Text="Open Project"

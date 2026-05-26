@@ -1,0 +1,61 @@
+<ContentDialog
+    x:Class="BlendHub.Dialogs.FeedbackDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:BlendHub.Dialogs"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Feedback"
+    CloseButtonText="Close"
+    Width="380">
+
+    <StackPanel Spacing="16" Width="340">
+        <!-- Button grid -->
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Feature Request button -->
+            <Button Grid.Column="0" HorizontalAlignment="Stretch" Padding="12" ToolTipService.ToolTip="Feature Request">
+                <FontIcon Glyph="&#xEA80;" FontSize="20" />
+            </Button>
+
+            <!-- Bug Report button -->
+            <Button Grid.Column="1" HorizontalAlignment="Stretch" Padding="12" ToolTipService.ToolTip="Bug Report">
+                <FontIcon Glyph="&#xEBE8;" FontSize="20" />
+            </Button>
+
+            <!-- Question button -->
+            <Button Grid.Column="2" HorizontalAlignment="Stretch" Padding="12" ToolTipService.ToolTip="Question">
+                <FontIcon Glyph="&#xE897;" FontSize="20" />
+            </Button>
+
+            <!-- Discussion button -->
+            <Button Grid.Column="3" HorizontalAlignment="Stretch" Padding="12" ToolTipService.ToolTip="Discussion">
+                <FontIcon Glyph="&#xE8BD;" FontSize="20" />
+            </Button>
+        </Grid>
+
+        <!-- Email text box with copy button -->
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox x:Name="EmailTextBox" Grid.Column="0" Text="blendhub.app@gmail.com" IsReadOnly="True" FontSize="14" HorizontalAlignment="Stretch" MinHeight="32" />
+
+            <Button x:Name="CopyBtn" Grid.Column="1" Padding="6,0,6,0" Height="32" VerticalAlignment="Stretch" ToolTipService.ToolTip="Copy email address" Click="CopyBtn_Click">
+                <FontIcon x:Name="CopyIcon" Glyph="&#xE8C8;" FontSize="16" />
+            </Button>
+        </Grid>
+
+        <!-- Description -->
+        <TextBlock Text="For any question, new feature request, suggestion or bug report, please send a message at the above email address." TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+    </StackPanel>
+</ContentDialog>

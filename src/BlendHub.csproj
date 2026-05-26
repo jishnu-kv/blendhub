@@ -5,20 +5,24 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>BlendHub</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Platforms>x64;ARM64</Platforms>
-    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
-    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishProfile>win-$(Platform).pubxml</PublishProfile>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
     <WinUISDKReferences>false</WinUISDKReferences>
-    <EnableMsixTooling>false</EnableMsixTooling>
+    <EnableMsixTooling>true</EnableMsixTooling>
     <Nullable>enable</Nullable>
     <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <Version>1.0.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <Page Update="pages\DownloadPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="pages\AddonsPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Update="pages\BackupPage.xaml">
@@ -36,30 +40,45 @@
     <Page Update="pages\SyncPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\CreateProjectDialogContent.xaml">
+    <Page Update="Controls\CreateProjectDialogContent.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\EditProjectDialogContent.xaml">
+    <Page Update="Controls\EditProjectDialogContent.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Update="pages\ProjectDetailPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Update="pages\ReferenceBoard.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="pages\ReferenceBoardStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="pages\SplashScreenPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Assets\**">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-    </Content>
     <Content Include="blender_versions_web.db">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="extensions.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
   </ItemGroup>
 
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
 
   <!--
@@ -71,9 +90,11 @@
     <ProjectCapability Include="Msix" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="CommunityToolkit.WinUI.Collections" Version="8.2.251219" />
     <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
     <PackageReference Include="CommunityToolkit.WinUI.Converters" Version="8.2.251219" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.Segmented" Version="8.2.251219" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
@@ -101,7 +122,7 @@
     <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Auto</AppxBundle>
-    <AppxBundlePlatforms>x86|x64|arm64</AppxBundlePlatforms>
+    <AppxBundlePlatforms>x64</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
   </PropertyGroup>
 </Project>

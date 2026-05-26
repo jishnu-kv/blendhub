@@ -10,11 +10,12 @@
             <converters:StringToBoolConverter x:Key="StringToBoolConverter" />
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
+            <FontFamily x:Key="SymbolThemeFontFamily">Segoe Fluent Icons, ms-appx:///Assets/Font/Segoe Fluent Icons.ttf#Segoe Fluent Icons</FontFamily>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
-                <!-- Other merged dictionaries here -->
+                <ResourceDictionary Source="ReferenceBoard/ReferenceBoardStyles.xaml" />
+                <ResourceDictionary Source="Icons.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <!-- Other app resources here -->
         </ResourceDictionary>
     </Application.Resources>
 </Application>

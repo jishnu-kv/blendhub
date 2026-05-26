@@ -1,9 +1,9 @@
 {
   "profiles": {
-    "BlendHub (Package)": {
+    "src (Package)": {
       "commandName": "MsixPackage"
     },
-    "BlendHub (Unpackaged)": {
+    "src (Unpackaged)": {
       "commandName": "Project"
     }
   }

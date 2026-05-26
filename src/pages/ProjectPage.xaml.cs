@@ -1,18 +1,19 @@
+using BlendHub.Models;
+using BlendHub.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Windowing;
-using Windows.Storage.Pickers;
-using WinRT.Interop;
 using System;
-using System.IO;
+using BlendHub.Controls;
+using BlendHub.Dialogs;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-using BlendHub.Models;
-using BlendHub.Services;
+using Windows.Storage.Pickers;
+using WinRT.Interop;
 
 namespace BlendHub.Pages
 {
@@ -26,7 +27,7 @@ namespace BlendHub.Pages
         public ProjectPage()
         {
             this.InitializeComponent();
-            this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
+
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -46,10 +47,10 @@ namespace BlendHub.Pages
             {
                 var loadedProjects = ProjectService.LoadProjects();
                 Debug.WriteLine($"[ProjectPage] Loaded {loadedProjects.Count} projects from JSON");
-                
+
                 _allProjects = loadedProjects;
                 ApplyFilterAndSort();
-                
+
                 Debug.WriteLine($"[ProjectPage] UI updated with {Projects.Count} filtered projects");
             }
             catch (Exception ex)
@@ -58,15 +59,16 @@ namespace BlendHub.Pages
             }
         }
 
-        private string _currentSortOption = "DateDesc";
+        private string _currentSortField = "Date";
+        private string _currentSortOrder = "Desc";
 
         private void ApplyFilterAndSort()
         {
             if (SearchTextBox == null) return;
-            
+
             string filter = SearchTextBox.Text.Trim().ToLowerInvariant();
-            var filtered = string.IsNullOrEmpty(filter) 
-                ? _allProjects 
+            var filtered = string.IsNullOrEmpty(filter)
+                ? _allProjects
                 : _allProjects.Where(p => p.Name.ToLowerInvariant().Contains(filter) || p.Path.ToLowerInvariant().Contains(filter));
 
             bool searchBoxHadFocus = false;
@@ -80,28 +82,68 @@ namespace BlendHub.Pages
             }
 
             IEnumerable<Project> sorted;
-            switch (_currentSortOption)
+            if (_currentSortField == "Date")
             {
-                case "DateAsc": sorted = filtered.OrderBy(x => x.CreatedAt); break;
-                case "NameAsc": sorted = filtered.OrderBy(x => string.IsNullOrEmpty(x.Name) ? "" : x.Name.ToLower()); break;
-                case "NameDesc": sorted = filtered.OrderByDescending(x => string.IsNullOrEmpty(x.Name) ? "" : x.Name.ToLower()); break;
-                case "DateDesc":
-                default:
-                    sorted = filtered.OrderByDescending(x => x.CreatedAt); break;
+                sorted = _currentSortOrder == "Asc"
+                    ? filtered.OrderBy(x => x.CreatedAt)
+                    : filtered.OrderByDescending(x => x.CreatedAt);
+            }
+            else if (_currentSortField == "Modified")
+            {
+                Func<Project, DateTime> getModifiedTime = x =>
+                {
+                    try
+                    {
+                        if (System.IO.File.Exists(x.FullBlendPath)) return System.IO.File.GetLastWriteTime(x.FullBlendPath);
+                        if (System.IO.Directory.Exists(x.Path)) return System.IO.Directory.GetLastWriteTime(x.Path);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[ProjectPage] Error getting modified time: {ex.Message}");
+                    }
+                    return x.CreatedAt;
+                };
+                sorted = _currentSortOrder == "Asc"
+                    ? filtered.OrderBy(getModifiedTime)
+                    : filtered.OrderByDescending(getModifiedTime);
+            }
+            else // Name
+            {
+                Func<Project, string> getName = x => string.IsNullOrEmpty(x.Name) ? "" : x.Name.ToLower();
+                sorted = _currentSortOrder == "Asc"
+                    ? filtered.OrderBy(getName)
+                    : filtered.OrderByDescending(getName);
             }
 
-            Projects.Clear();
-            foreach (var p in sorted)
+            string fieldText = _currentSortField switch
             {
-                Projects.Add(p);
+                "Modified" => "Date Modified",
+                "Name" => "Name",
+                "Date" => "Date Created",
+                _ => "Date Created"
+            };
+
+            string orderText = _currentSortField switch
+            {
+                "Name" => _currentSortOrder == "Asc" ? "(A-Z)" : "(Z-A)",
+                _ => _currentSortOrder == "Asc" ? "(Oldest)" : "(Newest)"
+            };
+
+            if (SortButtonText != null)
+            {
+                SortButtonText.Text = $"{fieldText} {orderText}";
             }
+
+            UpdateFilteredProjects(sorted.ToList());
 
             bool hasAnyProjects = _allProjects.Count > 0;
+            bool hasFilteredProjects = Projects.Count > 0;
+            bool isSearching = !string.IsNullOrEmpty(SearchTextBox?.Text.Trim());
 
             if (ProjectsList != null)
             {
                 ProjectsList.ItemsSource = Projects;
-                ProjectsList.Visibility = hasAnyProjects ? Visibility.Visible : Visibility.Collapsed;
+                ProjectsList.Visibility = hasFilteredProjects ? Visibility.Visible : Visibility.Collapsed;
             }
 
             if (searchBoxHadFocus && SearchTextBox != null)
@@ -109,14 +151,56 @@ namespace BlendHub.Pages
                 SearchTextBox.Focus(FocusState.Programmatic);
             }
 
-            if (NoProjectsPanel != null)
-            {
-                NoProjectsPanel.Visibility = hasAnyProjects ? Visibility.Collapsed : Visibility.Visible;
-            }
-            
             if (DropZone != null)
             {
-                DropZone.Margin = hasAnyProjects ? new Thickness(0, 0, 0, 8) : new Thickness(0);
+                DropZone.Visibility = (!hasAnyProjects && !isSearching) ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            if (NoSearchResultsPanel != null)
+            {
+                NoSearchResultsPanel.Visibility = (hasAnyProjects && !hasFilteredProjects) ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        private void UpdateFilteredProjects(List<Project> sorted)
+        {
+            if (Projects == null) return;
+
+            // 1. Remove items that are no longer in results
+            for (int i = Projects.Count - 1; i >= 0; i--)
+            {
+                var item = Projects[i];
+                if (!sorted.Any(x => x.Path == item.Path))
+                {
+                    Projects.RemoveAt(i);
+                }
+            }
+
+            // 2. Add or move items to match results content and order exactly
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                var targetItem = sorted[i];
+                int existingIdx = -1;
+
+                for (int j = i; j < Projects.Count; j++)
+                {
+                    if (Projects[j].Path == targetItem.Path)
+                    {
+                        existingIdx = j;
+                        break;
+                    }
+                }
+
+                if (existingIdx == -1)
+                {
+                    Projects.Insert(i, targetItem);
+                }
+                else if (existingIdx != i)
+                {
+                    var itemToMove = Projects[existingIdx];
+                    Projects.RemoveAt(existingIdx);
+                    Projects.Insert(i, itemToMove);
+                }
             }
         }
 
@@ -125,17 +209,29 @@ namespace BlendHub.Pages
             ApplyFilterAndSort();
         }
 
-        private void RefreshProjectsButton_Click(object sender, RoutedEventArgs e)
+        private async void RefreshProjectsButton_Click(object sender, RoutedEventArgs e)
         {
+            if (AppSettingsService.Instance.Settings.AutoDetectBlenderVersion)
+            {
+                await ProjectService.DetectProjectVersionsAsync(_allProjects);
+            }
             LoadProjects();
         }
 
-        private void SortMenuItem_Click(object sender, RoutedEventArgs e)
+        private void SortFieldItem_Click(object sender, RoutedEventArgs e)
         {
             if (sender is RadioMenuFlyoutItem item && item.IsChecked)
             {
-                _currentSortOption = item.Tag?.ToString() ?? "DateDesc";
-                SortButtonText.Text = item.Text;
+                _currentSortField = item.Tag?.ToString() ?? "Date";
+                ApplyFilterAndSort();
+            }
+        }
+
+        private void SortOrderItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is RadioMenuFlyoutItem item && item.IsChecked)
+            {
+                _currentSortOrder = item.Tag?.ToString() ?? "Desc";
                 ApplyFilterAndSort();
             }
         }
@@ -168,7 +264,7 @@ namespace BlendHub.Pages
                 var selectedVersion = content.SelectedVersion;
                 string blenderExePath = selectedVersion?.ExecutablePath ?? string.Empty;
                 string blenderVersionStr = selectedVersion?.Version ?? "Unknown";
-                var folders = content.Folders.Select(f => f.Name).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+                var folders = content.Folders.Where(f => f.IsSelected).Select(f => f.Name).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
                 var launchers = content.FileLaunchers
                     .Where(l => !string.IsNullOrWhiteSpace(l.Extension) && !string.IsNullOrWhiteSpace(l.ProgramPath))
                     .GroupBy(l => l.Extension.ToLowerInvariant())
@@ -176,8 +272,8 @@ namespace BlendHub.Pages
 
                 CreatingProgressPanel.Visibility = Visibility.Visible;
                 ProgressText.Text = $"Creating project '{projectName}'...";
-                
-                try 
+
+                try
                 {
                     Project newProject = new Project
                     {
@@ -190,30 +286,42 @@ namespace BlendHub.Pages
                         FileLaunchers = launchers
                     };
 
-                    await Task.Run(() => {
+                    await Task.Run(() =>
+                    {
                         if (!Directory.Exists(newProject.Path)) Directory.CreateDirectory(newProject.Path);
                         foreach (var sub in newProject.Subfolders)
                         {
                             string subPath = Path.Combine(newProject.Path, sub);
                             if (!Directory.Exists(subPath)) Directory.CreateDirectory(subPath);
                         }
-                        
+
                         if (!File.Exists(newProject.FullBlendPath))
                         {
                             bool createdProperly = false;
                             if (!string.IsNullOrEmpty(blenderExePath) && File.Exists(blenderExePath))
                             {
-                                try {
-                                    var info = new ProcessStartInfo {
+                                try
+                                {
+                                    var info = new ProcessStartInfo
+                                    {
                                         FileName = blenderExePath,
                                         Arguments = $"--background --python-expr \"import bpy; bpy.ops.wm.save_as_mainfile(filepath=r'{newProject.FullBlendPath}')\"",
-                                        CreateNoWindow = true, UseShellExecute = false
+                                        CreateNoWindow = true,
+                                        UseShellExecute = false
                                     };
                                     using var p = Process.Start(info);
                                     if (p != null) createdProperly = p.WaitForExit(10000) && File.Exists(newProject.FullBlendPath);
-                                } catch { }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Debug.WriteLine($"[ProjectPage] Error starting Blender process: {ex.Message}");
+                                    throw new Exception($"Failed to create the .blend file using the Blender executable. {ex.Message}");
+                                }
                             }
-                            if (!createdProperly) File.WriteAllText(newProject.FullBlendPath, "Blender project placeholder");
+                            if (!createdProperly)
+                            {
+                                throw new Exception("Failed to create the .blend file. The Blender process timed out or the file was not created.");
+                            }
                         }
                     });
 
@@ -230,9 +338,12 @@ namespace BlendHub.Pages
                 {
                     Debug.WriteLine($"[ProjectPage] Error creating project: {ex}");
                     await Task.Delay(100);
-                    var errorDialog = new ContentDialog {
-                        Title = "Creation Failed", Content = $"Could not create project folders: {ex.Message}",
-                        CloseButtonText = "OK", XamlRoot = this.XamlRoot,
+                    var errorDialog = new ContentDialog
+                    {
+                        Title = "Creation Failed",
+                        Content = $"Could not create project folders: {ex.Message}",
+                        CloseButtonText = "OK",
+                        XamlRoot = this.XamlRoot,
                         Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
                         RequestedTheme = (App.MainWindow.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default
                     };
@@ -257,18 +368,63 @@ namespace BlendHub.Pages
             if (file != null) await ProcessDroppedFolderAsync(await file.GetParentAsync());
         }
 
-        private void DropZone_DragOver(object sender, DragEventArgs e)
+        private void RootGrid_DragOver(object sender, DragEventArgs e)
         {
-            e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-            e.DragUIOverride.Caption = "Add to BlendHub";
+            if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+            {
+                e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+                if (DragOverlay != null)
+                {
+                    DragOverlay.Visibility = Visibility.Visible;
+                }
+            }
         }
 
-        private async void DropZone_Drop(object sender, DragEventArgs e)
+        private void DragOverlay_DragOver(object sender, DragEventArgs e)
         {
-            if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems)) {
-                var items = await e.DataView.GetStorageItemsAsync();
-                foreach (var item in items) if (item is Windows.Storage.StorageFolder folder) await ProcessDroppedFolderAsync(folder);
+            if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+            {
+                e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+                e.DragUIOverride.Caption = "Add to BlendHub";
             }
+        }
+
+        private void DragOverlay_DragLeave(object sender, DragEventArgs e)
+        {
+            if (DragOverlay != null)
+            {
+                DragOverlay.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private async void DragOverlay_Drop(object sender, DragEventArgs e)
+        {
+            if (DragOverlay != null)
+            {
+                DragOverlay.Visibility = Visibility.Collapsed;
+            }
+
+            if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+            {
+                var items = await e.DataView.GetStorageItemsAsync();
+                foreach (var item in items)
+                {
+                    if (item is Windows.Storage.StorageFolder folder)
+                    {
+                        await ProcessDroppedFolderAsync(folder);
+                    }
+                }
+            }
+        }
+
+        private void DropZone_DragOver(object sender, DragEventArgs e)
+        {
+            RootGrid_DragOver(sender, e);
+        }
+
+        private void DropZone_Drop(object sender, DragEventArgs e)
+        {
+            DragOverlay_Drop(sender, e);
         }
 
         private async Task ProcessDroppedFolderAsync(Windows.Storage.StorageFolder folder)
@@ -286,16 +442,25 @@ namespace BlendHub.Pages
                 .Select(d => System.IO.Path.GetFileName(d))
                 .ToList();
 
-            var newProject = new Project {
-                Name = folder.Name, Path = path,
+            var newProject = new Project
+            {
+                Name = folder.Name,
+                Path = path,
                 BlendFileName = Path.GetFileName(mainBlend),
-                CreatedAt = DateTime.Now, 
+                CreatedAt = DateTime.Now,
                 BlenderVersion = "Unknown",
                 Subfolders = subfolders
             };
+
+            if (AppSettingsService.Instance.Settings.AutoDetectBlenderVersion)
+            {
+                await ProjectService.DetectProjectVersionsAsync(new List<Project> { newProject });
+            }
+
             _allProjects.Add(newProject);
             ProjectService.SaveProjects(_allProjects);
             ApplyFilterAndSort();
         }
     }
 }
+

@@ -1,3 +1,5 @@
+using BlendHub.Models;
+using BlendHub.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -6,8 +8,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
-using BlendHub.Models;
-using BlendHub.Services;
 
 namespace BlendHub.Pages
 {
@@ -20,7 +20,7 @@ namespace BlendHub.Pages
         public SettingsPage()
         {
             this.InitializeComponent();
-            this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
+
             LoadGeneralSettings();
             LoadCurrentTheme();
             LoadLaunchers();
@@ -33,7 +33,9 @@ namespace BlendHub.Pages
             var settings = AppSettingsService.Instance.Settings;
             BackupLocationTextBox.Text = settings.BackupDirectory;
             UserNameTextBox.Text = settings.UserName;
-            
+            AutoDetectVersionToggle.IsOn = settings.AutoDetectBlenderVersion;
+            ExpandFoldersToggle.IsOn = settings.ExpandFoldersByDefault;
+
             // Set Default Page selection
             foreach (ComboBoxItem item in DefaultPageComboBox.Items)
             {
@@ -103,6 +105,18 @@ namespace BlendHub.Pages
                 AppSettingsService.Instance.Settings.DefaultPage = tag;
                 AppSettingsService.Instance.Save();
             }
+        }
+
+        private void AutoDetectVersionToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            AppSettingsService.Instance.Settings.AutoDetectBlenderVersion = AutoDetectVersionToggle.IsOn;
+            AppSettingsService.Instance.Save();
+        }
+
+        private void ExpandFoldersToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            AppSettingsService.Instance.Settings.ExpandFoldersByDefault = ExpandFoldersToggle.IsOn;
+            AppSettingsService.Instance.Save();
         }
 
         // --- Default Folders ---
@@ -180,6 +194,89 @@ namespace BlendHub.Pages
             SaveDefaultFolders();
         }
 
+        private async void Grip_DragStarting(UIElement sender, DragStartingEventArgs args)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is ProjectFolder folder)
+            {
+                args.Data.Properties["Folder"] = folder;
+                args.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+
+                // Find the parent SettingsCard to use as the drag visual preview
+                DependencyObject parent = fe;
+                while (parent != null && parent is not CommunityToolkit.WinUI.Controls.SettingsCard)
+                {
+                    parent = VisualTreeHelper.GetParent(parent);
+                }
+
+                if (parent is CommunityToolkit.WinUI.Controls.SettingsCard settingsCard)
+                {
+                    var deferral = args.GetDeferral();
+                    try
+                    {
+                        var renderTargetBitmap = new Microsoft.UI.Xaml.Media.Imaging.RenderTargetBitmap();
+                        await renderTargetBitmap.RenderAsync(settingsCard);
+                        var pixels = await renderTargetBitmap.GetPixelsAsync();
+                        var width = renderTargetBitmap.PixelWidth;
+                        var height = renderTargetBitmap.PixelHeight;
+
+                        if (width > 0 && height > 0)
+                        {
+                            var softwareBitmap = new Windows.Graphics.Imaging.SoftwareBitmap(
+                                Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8,
+                                width,
+                                height,
+                                Windows.Graphics.Imaging.BitmapAlphaMode.Premultiplied);
+
+                            softwareBitmap.CopyFromBuffer(pixels);
+
+                            // Calculate anchor point so that the cursor stays perfectly over the grip icon
+                            var transform = fe.TransformToVisual(settingsCard);
+                            var anchorPoint = transform.TransformPoint(new Windows.Foundation.Point(fe.ActualWidth / 2, fe.ActualHeight / 2));
+
+                            args.DragUI.SetContentFromSoftwareBitmap(softwareBitmap, anchorPoint);
+                        }
+                    }
+                    catch
+                    {
+                        // Fallback silently if rendering fails
+                    }
+                    finally
+                    {
+                        deferral.Complete();
+                    }
+                }
+            }
+        }
+
+        private void SettingsCard_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.DataView.Properties.ContainsKey("Folder"))
+            {
+                e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+                e.DragUIOverride.IsCaptionVisible = false;
+                e.DragUIOverride.IsGlyphVisible = false;
+                e.Handled = true;
+            }
+        }
+
+        private void SettingsCard_Drop(object sender, DragEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is ProjectFolder targetFolder &&
+                e.DataView.Properties.TryGetValue("Folder", out var sourceObj) && sourceObj is ProjectFolder sourceFolder)
+            {
+                int sourceIndex = DefaultFolders.IndexOf(sourceFolder);
+                int targetIndex = DefaultFolders.IndexOf(targetFolder);
+
+                if (sourceIndex >= 0 && targetIndex >= 0 && sourceIndex != targetIndex)
+                {
+                    DefaultFolders.Move(sourceIndex, targetIndex);
+                    UpdateFolderLabels();
+                    SaveDefaultFolders();
+                }
+                e.Handled = true;
+            }
+        }
+
         // --- File Launchers ---
         private void LoadLaunchers()
         {
@@ -194,7 +291,7 @@ namespace BlendHub.Pages
                     ProgramName = System.IO.Path.GetFileNameWithoutExtension(kvp.Value)
                 });
             }
-            
+
             // Add default .psd entry if no launchers exist
             if (Launchers.Count == 0)
             {
@@ -387,88 +484,12 @@ namespace BlendHub.Pages
 
         private async void PrivacyPolicy_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new ContentDialog
-            {
-                Title = "Privacy Policy",
-                CloseButtonText = "Close",
-                DefaultButton = ContentDialogButton.Close,
-                XamlRoot = this.XamlRoot,
-                Content = BuildPrivacyPolicyContent()
-            };
-            await dialog.ShowAsync();
+            await BlendHub.Dialogs.LegalDialogs.ShowPrivacyPolicyAsync(this.XamlRoot);
         }
 
         private async void TermsOfService_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new ContentDialog
-            {
-                Title = "Terms of Use",
-                CloseButtonText = "Close",
-                DefaultButton = ContentDialogButton.Close,
-                XamlRoot = this.XamlRoot,
-                Content = BuildTermsContent()
-            };
-            await dialog.ShowAsync();
+            await BlendHub.Dialogs.LegalDialogs.ShowTermsOfServiceAsync(this.XamlRoot);
         }
-
-        private static UIElement BuildPrivacyPolicyContent()
-        {
-            var root = new StackPanel { Spacing = 16 };
-
-            root.Children.Add(new TextBlock
-            {
-                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                FontSize = 12,
-                Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-                Text = "Last update: April 9, 2026"
-            });
-
-            root.Children.Add(Wrap("The privacy policy describes how, what and why some data might be required to be collected. By using BlendHub, you acknowledge and consent to the practices described below."));
-            root.Children.Add(Header("User data"));
-            root.Children.Add(Wrap("This application doesn\u2019t store, collect, use or share any personal/analytics data. All user data including project information, settings, and preferences are stored locally on your device in the AppData\\Roaming\\BlendHub folder."));
-            root.Children.Add(Header("Internet connection"));
-            root.Children.Add(Wrap("This app requires internet connection only for the following features:"));
-            var netList = new StackPanel { Margin = new Microsoft.UI.Xaml.Thickness(16, 0, 0, 0), Spacing = 4 };
-            netList.Children.Add(new TextBlock { Text = "\u2022 Downloading Blender versions from blender.org" });
-            netList.Children.Add(new TextBlock { Text = "\u2022 Fetching available Blender version information" });
-            root.Children.Add(netList);
-            root.Children.Add(Wrap("You can use the app without an internet connection but the download features will not work properly."));
-            root.Children.Add(Header("Other websites"));
-            root.Children.Add(Wrap("Some features may contain links to other websites (such as blender.org or GitHub) that are not operated by the developer. If you click on a third party link, you will be directed to that third party\u2019s site. You are strongly advised to review the Privacy Policy of every site you visit."));
-            root.Children.Add(Header("Changes"));
-            root.Children.Add(Wrap("The privacy policy may suffer changes from time to time to reflect updates made to the app. When this Policy is changed in a material manner, you\u2019ll be informed by updating the \u201cLast update\u201d section."));
-
-            return new ScrollViewer { MaxHeight = 400, Padding = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 8), Content = root };
-        }
-
-        private static UIElement BuildTermsContent()
-        {
-            var root = new StackPanel { Spacing = 16 };
-
-            root.Children.Add(Wrap("By downloading and installing BlendHub, you acknowledge that you have read, understood and agreed the following terms of use. If you don\u2019t agree with these terms, you may not install or use this software."));
-            root.Children.Add(Wrap("This software product is supplied \u201cas-is\u201d. The publisher or the author assumes no liability for damages, direct or consequential, which may result from the use of this software."));
-            root.Children.Add(Header("Grant of license"));
-            root.Children.Add(Wrap("You are granted the right to install and use copies of this product on your computers for any personal non-commercial purposes only."));
-            root.Children.Add(Header("Limitations"));
-            root.Children.Add(Wrap("The following limitations are applied to this software product:"));
-            var limList = new StackPanel { Margin = new Microsoft.UI.Xaml.Thickness(16, 0, 0, 0), Spacing = 4 };
-            limList.Children.Add(new TextBlock { Text = "\u2022 you may not reverse engineer, decompile, or disassemble it" });
-            limList.Children.Add(new TextBlock { Text = "\u2022 you may not rent, lease, or lend it" });
-            limList.Children.Add(new TextBlock { Text = "\u2022 you may not include parts of it in your software without the publisher's permission" });
-            limList.Children.Add(new TextBlock { Text = "\u2022 you may not alter or modify it in any way or create a new installer for it" });
-            root.Children.Add(limList);
-            root.Children.Add(Header("Third party trademarks"));
-            root.Children.Add(Wrap("Blender is a registered trademark of the Blender Foundation. This application is not affiliated with or endorsed by the Blender Foundation."));
-            root.Children.Add(Header("Termination"));
-            root.Children.Add(Wrap("Without prejudice to any other rights, the author may terminate this License Agreement if you fail to comply with the terms and conditions of this agreement. In such event, you must destroy all copies of the software."));
-
-            return new ScrollViewer { MaxHeight = 400, Padding = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 8), Content = root };
-        }
-
-        private static TextBlock Header(string text) =>
-            new TextBlock { Text = text, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
-
-        private static TextBlock Wrap(string text) =>
-            new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap };
     }
 }

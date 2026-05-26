@@ -9,7 +9,11 @@
     xmlns:controls="using:CommunityToolkit.WinUI.Controls"
     mc:Ignorable="d">
 
-    <Grid Padding="24,24,24,24">
+    <Page.Resources>
+        <CollectionViewSource x:Name="GroupedSyncItems" />
+    </Page.Resources>
+
+    <Grid Padding="0,24,0,0">
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup>
                 <VisualState x:Name="WideState">
@@ -40,7 +44,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid x:Name="HeaderGrid" Grid.Row="0" Margin="0,0,0,20">
+        <Grid x:Name="HeaderGrid" Grid.Row="0" Margin="24,0,24,20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -51,50 +55,74 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" VerticalAlignment="Center">
-                <TextBlock Text="Sync Settings" 
-                         FontSize="28" 
-                         FontWeight="SemiBold"
-                         AutomationProperties.HeadingLevel="Level1" />
+                <TextBlock Text="Sync Settings"
+                    FontSize="28"
+                    FontWeight="SemiBold"
+                    AutomationProperties.HeadingLevel="Level1" />
             </StackPanel>
 
-            <StackPanel x:Name="ActionPanel" Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="16" HorizontalAlignment="Right" VerticalAlignment="Center">
+            <StackPanel x:Name="ActionPanel" Grid.Row="0" Grid.Column="1" Orientation="Horizontal"
+                Spacing="16" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <StackPanel VerticalAlignment="Center" Spacing="4">
-                    <TextBlock x:Name="StatusText" Text="" FontWeight="Medium" HorizontalAlignment="Right" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <ProgressBar x:Name="SyncProgressBar" Value="0" Maximum="100" Height="4" MinWidth="120" IsIndeterminate="False" Opacity="0" />
+                    <TextBlock x:Name="StatusText" Text="" FontWeight="Medium"
+                        HorizontalAlignment="Right" FontSize="13"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ProgressBar x:Name="SyncProgressBar" Value="0" Maximum="100" Height="4"
+                        MinWidth="120" IsIndeterminate="False" Opacity="0" />
                 </StackPanel>
-                <Button x:Name="StartSyncButton" Content="Start Sync" Style="{StaticResource AccentButtonStyle}" Padding="24,10" FontSize="14" FontWeight="Normal" Click="StartSyncButton_Click" />
+                <Button x:Name="StartSyncButton" Content="Start Sync"
+                    Style="{StaticResource AccentButtonStyle}" Padding="24,10" FontSize="14"
+                    FontWeight="Normal" Click="StartSyncButton_Click" />
             </StackPanel>
         </Grid>
 
         <!-- Info Bars -->
-        <StackPanel x:Name="InfoBarPanel" Grid.Row="1" Spacing="4" Margin="0,0,0,0">
-            <InfoBar x:Name="WarningInfoBar" IsOpen="False" IsClosable="True" Severity="Warning" Title="" Message="" Closed="InfoBar_Closed" />
-            <InfoBar x:Name="ErrorInfoBar"   IsOpen="False" IsClosable="True" Severity="Error"   Title="" Message="" Closed="InfoBar_Closed" />
-            <InfoBar x:Name="SuccessInfoBar" IsOpen="False" IsClosable="True" Severity="Success"  Title="Sync Complete" Message="" Closed="InfoBar_Closed" />
+        <StackPanel x:Name="InfoBarPanel" Grid.Row="1" Spacing="4" Margin="24,0,24,0">
+            <InfoBar x:Name="WarningInfoBar" IsOpen="False" IsClosable="True" Severity="Warning"
+                Title="" Message="" Closed="InfoBar_Closed" />
+            <InfoBar x:Name="ErrorInfoBar" IsOpen="False" IsClosable="True" Severity="Error"
+                Title="" Message="" Closed="InfoBar_Closed" />
+            <InfoBar x:Name="SuccessInfoBar" IsOpen="False" IsClosable="True" Severity="Success"
+                Title="Sync Complete" Message="" Closed="InfoBar_Closed" />
         </StackPanel>
 
         <!-- Main Content -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Stretch" Padding="0,0,0,0">
-            <StackPanel Spacing="16">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+            VerticalContentAlignment="Stretch" Padding="0,0,0,0">
+            <StackPanel Spacing="16" Padding="24,0,24,0">
 
                 <StackPanel Spacing="2">
-                    <controls:SettingsCard Header="Source Blender Version" Description="Choose which Blender version's settings you want to copy.">
-                        <ComboBox x:Name="SourceVersionComboBox" MinWidth="200" DisplayMemberPath="DisplayName" SelectionChanged="SourceVersionComboBox_SelectionChanged" HorizontalAlignment="Right" />
+                    <controls:SettingsCard x:Name="SourceVersionCard"
+                        Header="Source Blender Version"
+                        Description="Choose which Blender version's settings you want to copy.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE7B8;" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ComboBox x:Name="SourceVersionComboBox" MinWidth="200"
+                            DisplayMemberPath="DisplayName"
+                            SelectionChanged="SourceVersionComboBox_SelectionChanged"
+                            HorizontalAlignment="Right" />
                     </controls:SettingsCard>
 
                     <!-- Target Blender Versions -->
-                    <controls:SettingsExpander Header="Target Blender Versions" Description="Select the Blender versions you want to synchronize with the source." IsExpanded="True">
+                    <controls:SettingsExpander x:Name="TargetVersionsExpander"
+                        Header="Target Blender Versions"
+                        Description="Select the Blender versions you want to synchronize with the source."
+                        IsExpanded="True">
                         <controls:SettingsExpander.Items>
-                            <controls:SettingsCard ContentAlignment="Vertical" HorizontalAlignment="Stretch" Padding="32,8">
-                                <ItemsRepeater x:Name="TargetVersionsListView" HorizontalAlignment="Stretch" Margin="0,8">
+                            <controls:SettingsCard ContentAlignment="Vertical"
+                                HorizontalAlignment="Stretch" Padding="60,16" CornerRadius="0" Margin="0,0,0,0">
+                                <ItemsRepeater x:Name="TargetVersionsListView"
+                                    HorizontalAlignment="Stretch" Margin="0">
                                     <ItemsRepeater.Layout>
-                                        <UniformGridLayout MinItemWidth="160" Orientation="Horizontal" ItemsStretch="Fill" />
+                                        <UniformGridLayout MinItemWidth="160"
+                                            Orientation="Horizontal" ItemsStretch="Fill" />
                                     </ItemsRepeater.Layout>
                                     <ItemsRepeater.ItemTemplate>
                                         <DataTemplate x:DataType="models:TargetVersionViewModel">
-                                            <Grid MinWidth="160" Margin="4" Padding="8,4">
-                                                <CheckBox Content="{x:Bind DisplayName}" IsChecked="{x:Bind IsSelected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0" />
-                                            </Grid>
+                                            <CheckBox Content="{x:Bind DisplayName}"
+                                                IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
+                                                VerticalAlignment="Center" Margin="0,6,12,6" />
                                         </DataTemplate>
                                     </ItemsRepeater.ItemTemplate>
                                 </ItemsRepeater>
@@ -103,23 +131,44 @@
                     </controls:SettingsExpander>
 
                     <!-- Items to Sync -->
-                    <controls:SettingsExpander Header="Items to Sync" Description="Select which parts of the configuration to synchronize." IsExpanded="True">
+                    <controls:SettingsExpander x:Name="ItemsToSyncExpander" Header="Items to Sync"
+                        Description="Select which parts of the configuration to synchronize."
+                        IsExpanded="True">
+                        <controls:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE8A4;" />
+                        </controls:SettingsExpander.HeaderIcon>
                         <controls:SettingsExpander.Items>
-                            <controls:SettingsCard ContentAlignment="Vertical" HorizontalAlignment="Stretch" Padding="32,8">
-                                <ItemsRepeater x:Name="ItemsListView" HorizontalAlignment="Stretch" Margin="0,8">
+                            <controls:SettingsCard ContentAlignment="Vertical"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                Padding="60,16" CornerRadius="0" Margin="0,0,0,0">
+                                <ItemsRepeater x:Name="SyncItemsRepeater"
+                                    ItemsSource="{Binding Source={StaticResource GroupedSyncItems}}"
+                                    HorizontalAlignment="Stretch">
                                     <ItemsRepeater.Layout>
-                                        <UniformGridLayout MinItemWidth="160" Orientation="Horizontal" ItemsStretch="Fill" />
+                                        <StackLayout Orientation="Horizontal" Spacing="88" />
                                     </ItemsRepeater.Layout>
                                     <ItemsRepeater.ItemTemplate>
-                                        <DataTemplate x:DataType="models:ConfigItemViewModel">
-                                            <Grid MinWidth="160" Margin="4" Padding="8,4" 
-                                                  ToolTipService.ToolTip="{x:Bind TooltipText}">
-                                                <CheckBox Content="{x:Bind Name}" 
-                                                          IsChecked="{x:Bind IsEnabled, Mode=TwoWay}" 
-                                                          IsEnabled="{x:Bind IsExists}"
-                                                          VerticalAlignment="Center"
-                                                          Margin="0" />
-                                            </Grid>
+                                        <DataTemplate>
+                                            <StackPanel HorizontalAlignment="Stretch" Margin="0">
+                                                <TextBlock Text="{Binding Key}"
+                                                    FontSize="14"
+                                                    FontWeight="SemiBold"
+                                                    Margin="0,0,0,12"
+                                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
+                                                <ItemsRepeater ItemsSource="{Binding Items}">
+                                                    <ItemsRepeater.ItemTemplate>
+                                                        <DataTemplate
+                                                            x:DataType="models:ConfigItemViewModel">
+                                                            <CheckBox Content="{x:Bind Name}"
+                                                                IsChecked="{x:Bind IsEnabled, Mode=TwoWay}"
+                                                                IsEnabled="{x:Bind IsExists}"
+                                                                Margin="0,2,0,2"
+                                                                ToolTipService.ToolTip="{x:Bind TooltipText}" />
+                                                        </DataTemplate>
+                                                    </ItemsRepeater.ItemTemplate>
+                                                </ItemsRepeater>
+                                            </StackPanel>
                                         </DataTemplate>
                                     </ItemsRepeater.ItemTemplate>
                                 </ItemsRepeater>

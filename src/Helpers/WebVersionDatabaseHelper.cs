@@ -1,16 +1,22 @@
+using BlendHub.Models;
+using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-using Microsoft.Data.Sqlite;
 using System.Diagnostics;
-using BlendHub.Models;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Windows.ApplicationModel;
 
 namespace BlendHub.Helpers
 {
     public static class WebVersionDatabaseHelper
     {
+        private static readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.All });
+        private const string BaseUrl = "https://download.blender.org/release/";
+
         private static string GetAppDirectory()
         {
             try
@@ -33,12 +39,12 @@ namespace BlendHub.Helpers
         {
             var roamingPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             var blendHubPath = Path.Combine(roamingPath, "BlendHub");
-            
+
             if (!Directory.Exists(blendHubPath))
             {
                 Directory.CreateDirectory(blendHubPath);
             }
-            
+
             return Path.Combine(blendHubPath, "blender_versions_web.db");
         }
 
@@ -56,22 +62,22 @@ namespace BlendHub.Helpers
             try
             {
                 var roamingDbPath = GetRoamingDatabasePath();
-                
+
                 Debug.WriteLine($"[WebDB] InitializeDatabaseAsync called");
                 Debug.WriteLine($"[WebDB] Roaming path: {roamingDbPath}");
                 Debug.WriteLine($"[WebDB] Roaming file exists: {File.Exists(roamingDbPath)}");
-                
+
                 // Check if database already exists in roaming folder
                 if (!File.Exists(roamingDbPath))
                 {
                     Debug.WriteLine("[WebDB] Database not found in roaming folder, copying from app package...");
-                    
+
                     // Copy from app installation directory
                     var appDbPath = Path.Combine(GetAppDirectory(), "blender_versions_web.db");
-                    
+
                     Debug.WriteLine($"[WebDB] Looking for source at: {appDbPath}");
                     Debug.WriteLine($"[WebDB] Source file exists: {File.Exists(appDbPath)}");
-                    
+
                     if (File.Exists(appDbPath))
                     {
                         File.Copy(appDbPath, roamingDbPath, true);
@@ -153,6 +159,7 @@ namespace BlendHub.Helpers
                 {
                     await connection.OpenAsync();
 
+                    // Step 1: Load all versions
                     using (var command = connection.CreateCommand())
                     {
                         command.CommandText = "SELECT Id, Version FROM Versions ORDER BY Id DESC";
@@ -163,36 +170,37 @@ namespace BlendHub.Helpers
                                 var versionId = reader.GetString(0);
                                 var version = reader.GetString(1);
 
-                                var versionInfo = new BlenderVersionJsonInfo
+                                result[versionId] = new BlenderVersionJsonInfo
                                 {
                                     Version = version,
                                     WindowsInstallers = new List<WindowsInstaller>()
                                 };
+                            }
+                        }
+                    }
 
-                                // Get installers for this version
-                                using (var installerCommand = connection.CreateCommand())
+                    // Step 2: Load all installers in one query and group them in memory
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = @"
+                            SELECT VersionId, Filename, Url, ReleaseDate, SizeBytes 
+                            FROM Installers";
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                var versionId = reader.GetString(0);
+                                if (result.TryGetValue(versionId, out var versionInfo))
                                 {
-                                    installerCommand.CommandText = @"
-                                        SELECT Filename, Url, ReleaseDate, SizeBytes FROM Installers
-                                        WHERE VersionId = @versionId";
-                                    installerCommand.Parameters.AddWithValue("@versionId", versionId);
-
-                                    using (var installerReader = await installerCommand.ExecuteReaderAsync())
+                                    versionInfo.WindowsInstallers.Add(new WindowsInstaller
                                     {
-                                        while (await installerReader.ReadAsync())
-                                        {
-                                            versionInfo.WindowsInstallers.Add(new WindowsInstaller
-                                            {
-                                                Filename = installerReader.GetString(0),
-                                                Url = installerReader.GetString(1),
-                                                ReleaseDate = installerReader.IsDBNull(2) ? "Unknown" : installerReader.GetString(2),
-                                                SizeBytes = installerReader.GetInt64(3)
-                                            });
-                                        }
-                                    }
+                                        Filename = reader.GetString(1),
+                                        Url = reader.GetString(2),
+                                        ReleaseDate = reader.IsDBNull(3) ? "Unknown" : reader.GetString(3),
+                                        SizeBytes = reader.GetInt64(4)
+                                    });
                                 }
-
-                                result[versionId] = versionInfo;
                             }
                         }
                     }
@@ -209,48 +217,140 @@ namespace BlendHub.Helpers
         }
 
         /// <summary>
-        /// Refresh database from app package (use when updating)
+        /// Refresh database by scraping the Blender release website
         /// </summary>
         public static async Task RefreshDatabaseAsync()
         {
-            var roamingDbPath = GetRoamingDatabasePath();
-            var appDbPath = Path.Combine(GetAppDirectory(), "blender_versions_web.db");
-
-            if (!File.Exists(appDbPath))
+            try
             {
-                Debug.WriteLine($"[WebDB] Source database not found at: {appDbPath}");
-                return;
-            }
+                Debug.WriteLine($"[WebDB] Starting web scrape from {BaseUrl}");
 
-            // Retry logic for file lock
-            int maxRetries = 3;
-            int delayMs = 100;
+                var html = await _httpClient.GetStringAsync(BaseUrl);
+                var versionDirs = ParseDirectoryListing(html, BaseUrl)
+                    .Where(e => e.Name.StartsWith("Blender", StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(e => VersionHelper.ParseVersion(e.Name.StartsWith("Blender", StringComparison.OrdinalIgnoreCase) ? e.Name.Substring(7) : e.Name))
+                    .ToList();
 
-            for (int i = 0; i < maxRetries; i++)
-            {
-                try
+                Debug.WriteLine($"[WebDB] Found {versionDirs.Count} version directories. Scraping most recent versions...");
+
+                using (var connection = new SqliteConnection(GetConnectionString()))
                 {
-                    // Force GC to release any lingering SQLite handles
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
+                    await connection.OpenAsync();
 
-                    if (File.Exists(roamingDbPath))
+                    // Limit to top 20 newest versions for speed, or scan all if needed.
+                    // Let's do top 15 for a good balance of speed and coverage.
+                    var versionsToScan = versionDirs.Take(15).ToList();
+
+                    foreach (var dir in versionsToScan)
                     {
-                        File.Delete(roamingDbPath);
-                    }
+                        var dirname = dir.Name;
+                        var versionStr = dirname.StartsWith("Blender", StringComparison.OrdinalIgnoreCase) ? dirname.Substring(7) : dirname;
+                        var versionId = VersionHelper.GetShortVersion(versionStr);
 
-                    File.Copy(appDbPath, roamingDbPath, true);
-                    Debug.WriteLine($"[WebDB] Refreshed database from {appDbPath}");
-                    return;
+                        Debug.WriteLine($"[WebDB] Scraping version directory: {dirname}...");
+
+                        try
+                        {
+                            var subHtml = await _httpClient.GetStringAsync(dir.Url);
+                            var files = ParseDirectoryListing(subHtml, dir.Url);
+                            var windowsFiles = files.Where(f => IsWindowsInstaller(f.Name)).ToList();
+
+                            if (windowsFiles.Any())
+                            {
+                                await UpsertVersionAsync(connection, versionId, versionStr, dirname);
+                                foreach (var f in windowsFiles)
+                                {
+                                    await InsertInstallerAsync(connection, versionId, f.Name, f.Url, f.Date, f.SizeBytes);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[WebDB] Failed to scrape {dirname}: {ex.Message}");
+                        }
+                    }
                 }
-                catch (IOException) when (i < maxRetries - 1)
-                {
-                    Debug.WriteLine($"[WebDB] File locked, retrying... ({i + 1}/{maxRetries})");
-                    await Task.Delay(delayMs * (i + 1));
-                }
+
+                Debug.WriteLine("[WebDB] Web refresh complete");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[WebDB] Error refreshing from web: {ex.Message}");
+                throw;
+            }
+        }
+
+        private static List<(string Name, string Url, string Date, long SizeBytes)> ParseDirectoryListing(string html, string baseUrl)
+        {
+            var results = new List<(string Name, string Url, string Date, long SizeBytes)>();
+
+            // Regex to match Apache directory listing entries
+            // Pattern: <a href="filename">filename</a>   DD-Mon-YYYY HH:MM   SIZE
+            var matches = Regex.Matches(html, @"<a href=""([^""]+)"">[^<]+</a>\s+(\d{2}-\w{3}-\d{4}\s+\d{2}:\d{2})\s+([\d-]+|-)");
+
+            foreach (Match m in matches)
+            {
+                var href = m.Groups[1].Value;
+                if (href == "../" || href == "/") continue;
+
+                var name = href.TrimEnd('/');
+                var date = m.Groups[2].Value;
+                var sizeStr = m.Groups[3].Value;
+                long size = 0;
+                if (long.TryParse(sizeStr, out var s)) size = s;
+
+                results.Add((name, baseUrl + href, date, size));
             }
 
-            throw new IOException("Unable to refresh database - file is locked by another process");
+            return results;
+        }
+
+        private static bool IsWindowsInstaller(string filename)
+        {
+            var lower = filename.ToLower();
+            bool hasKeyword = Regex.IsMatch(lower, @"windows|_win");
+            string ext = Path.GetExtension(lower);
+            var windowsExts = new[] { ".exe", ".msi", ".msix", ".zip" };
+            return hasKeyword && windowsExts.Contains(ext);
+        }
+
+        private static async Task UpsertVersionAsync(SqliteConnection conn, string id, string version, string directory)
+        {
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    INSERT OR REPLACE INTO Versions (Id, Version, Directory, LastUpdated)
+                    VALUES (@id, @version, @dir, @now)";
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.Parameters.AddWithValue("@version", version);
+                cmd.Parameters.AddWithValue("@dir", directory);
+                cmd.Parameters.AddWithValue("@now", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"));
+                await cmd.ExecuteNonQueryAsync();
+            }
+        }
+
+        private static async Task InsertInstallerAsync(SqliteConnection conn, string versionId, string filename, string url, string date, long size)
+        {
+            using (var cmd = conn.CreateCommand())
+            {
+                // Check if already exists to avoid duplicates
+                cmd.CommandText = "SELECT COUNT(*) FROM Installers WHERE VersionId = @vId AND Filename = @file";
+                cmd.Parameters.AddWithValue("@vId", versionId);
+                cmd.Parameters.AddWithValue("@file", filename);
+                var countObj = await cmd.ExecuteScalarAsync();
+                long count = countObj != null ? (long)countObj : 0;
+
+                if (count == 0)
+                {
+                    cmd.CommandText = @"
+                        INSERT INTO Installers (VersionId, Filename, Url, ReleaseDate, SizeBytes)
+                        VALUES (@vId, @file, @url, @date, @size)";
+                    cmd.Parameters.AddWithValue("@url", url);
+                    cmd.Parameters.AddWithValue("@date", date);
+                    cmd.Parameters.AddWithValue("@size", size);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
         }
 
         /// <summary>

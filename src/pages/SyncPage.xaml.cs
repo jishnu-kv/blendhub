@@ -1,13 +1,10 @@
+using BlendHub.Models;
+using BlendHub.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
-using BlendHub.Services;
-using BlendHub.Models;
-using BlendHub.Helpers;
 
 namespace BlendHub.Pages
 {
@@ -22,8 +19,7 @@ namespace BlendHub.Pages
         public SyncPage()
         {
             this.InitializeComponent();
-            this.NavigationCacheMode = Microsoft.UI.Xaml.Navigation.NavigationCacheMode.Required;
-            ItemsListView.ItemsSource = _syncItems;
+
             TargetVersionsListView.ItemsSource = _targetVersions;
         }
 
@@ -60,14 +56,20 @@ namespace BlendHub.Pages
             bool hasItems = _syncItems.Any(i => i.IsEnabled);
             bool hasTarget = _targetVersions.Any(v => v.IsSelected);
 
-            if (!hasSource || !hasItems || !hasTarget)
+            if (!hasSource || !hasItems || !hasTarget || _targetVersions.Count == 0)
             {
                 StartSyncButton.IsEnabled = false;
-                
+
                 if (!hasSource)
                 {
                     WarningInfoBar.Title = "Missing Source";
                     WarningInfoBar.Message = "Please select a source Blender version.";
+                }
+                else if (_targetVersions.Count == 0)
+                {
+                    WarningInfoBar.Title = "No Targets Available";
+                    WarningInfoBar.Message = "There are no other Blender versions installed to sync with.";
+                    WarningInfoBar.Severity = InfoBarSeverity.Error;
                 }
                 else if (!hasItems)
                 {
@@ -80,15 +82,22 @@ namespace BlendHub.Pages
                     WarningInfoBar.Message = "Please select at least one target Blender version.";
                 }
 
-                WarningInfoBar.Severity = InfoBarSeverity.Warning;
+                if (_targetVersions.Count > 0)
+                {
+                    WarningInfoBar.Severity = InfoBarSeverity.Warning;
+                }
+
                 WarningInfoBar.IsOpen = true;
                 if (SuccessInfoBar != null) SuccessInfoBar.IsOpen = false;
                 UpdateInfoBarSpacing();
+
+                EnableAllExpanders(_targetVersions.Count > 0);
             }
             else
             {
                 StartSyncButton.IsEnabled = true;
                 WarningInfoBar.IsOpen = false;
+                EnableAllExpanders(true);
             }
         }
 
@@ -103,14 +112,39 @@ namespace BlendHub.Pages
                     Name = item.Name,
                     IsEnabled = item.IsEnabled,
                     IsExists = item.Exists,
-                    TooltipText = item.Tooltip, // Pass tooltip info
+                    TooltipText = item.Category,
+                    Category = item.Category,
                     RelativePath = item.RelativePath,
                     IsFolder = item.IsFolder
                 };
                 vm.PropertyChanged += (s, e) => ValidateSyncState();
                 _syncItems.Add(vm);
             }
+
+            // Group by category and update view
+            var groups = _syncItems
+                .GroupBy(i => i.Category)
+                .OrderBy(g => GetCategoryOrder(g.Key))
+                .Select(g => new CategoryGroup
+                {
+                    Key = g.Key,
+                    Items = g.ToList()
+                })
+                .ToList();
+
+            GroupedSyncItems.Source = groups;
             ValidateSyncState();
+        }
+
+        private int GetCategoryOrder(string category)
+        {
+            return category switch
+            {
+                "Extensions & Tools" => 1,
+                "Preferences & Configuration" => 2,
+                "History & Recent Data" => 3,
+                _ => 99
+            };
         }
 
         private void RefreshTargetVersions(string sourceVersion)
@@ -219,12 +253,27 @@ namespace BlendHub.Pages
                 SyncProgressBar.Opacity = 0;
             }
         }
+        private void EnableAllExpanders(bool enable)
+        {
+            if (TargetVersionsExpander != null)
+            {
+                TargetVersionsExpander.IsEnabled = enable;
+                TargetVersionsExpander.IsExpanded = enable;
+            }
+            if (ItemsToSyncExpander != null)
+            {
+                ItemsToSyncExpander.IsEnabled = enable;
+                ItemsToSyncExpander.IsExpanded = enable;
+            }
+            if (SourceVersionCard != null) SourceVersionCard.IsEnabled = enable;
+        }
+
         private void InfoBar_Closed(InfoBar sender, InfoBarClosedEventArgs args) => UpdateInfoBarSpacing();
 
         private void UpdateInfoBarSpacing()
         {
             bool anyOpen = WarningInfoBar.IsOpen || ErrorInfoBar.IsOpen || SuccessInfoBar.IsOpen;
-            InfoBarPanel.Margin = new Thickness(0, 0, 0, anyOpen ? 8 : 0);
+            InfoBarPanel.Margin = new Thickness(24, 0, 24, anyOpen ? 8 : 0);
         }
     }
 }
