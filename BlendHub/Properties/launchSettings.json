@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "Blend Hub (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Blend Hub (Unpackaged)": {
+      "commandName": "Project",
+      "workingDirectory": "E:\\apps\\Blend Hub\\Blend Hub"
+    }
+  }
+}
