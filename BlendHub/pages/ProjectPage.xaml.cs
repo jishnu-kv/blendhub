@@ -52,6 +52,7 @@ namespace BlendHub.Pages
                 ApplyFilterAndSort();
 
                 Debug.WriteLine($"[ProjectPage] UI updated with {Projects.Count} filtered projects");
+
             }
             catch (Exception ex)
             {
@@ -146,6 +147,11 @@ namespace BlendHub.Pages
                 ProjectsList.Visibility = hasFilteredProjects ? Visibility.Visible : Visibility.Collapsed;
             }
 
+            if (ProjectsListContainer != null)
+            {
+                ProjectsListContainer.Visibility = hasAnyProjects ? Visibility.Visible : Visibility.Collapsed;
+            }
+
             if (searchBoxHadFocus && SearchTextBox != null)
             {
                 SearchTextBox.Focus(FocusState.Programmatic);
@@ -211,6 +217,8 @@ namespace BlendHub.Pages
 
         private async void RefreshProjectsButton_Click(object sender, RoutedEventArgs e)
         {
+            ProjectCardView.ClearThumbnailCache();
+            Projects.Clear();
             if (AppSettingsService.Instance.Settings.AutoDetectBlenderVersion)
             {
                 await ProjectService.DetectProjectVersionsAsync(_allProjects);
@@ -280,6 +288,7 @@ namespace BlendHub.Pages
                         Name = projectName,
                         Path = Path.Combine(projectLocation, projectName),
                         BlendFileName = fileName,
+                        AutoUpdatePrimaryBlend = content.AutoUpdatePrimaryBlend,
                         BlenderVersion = blenderVersionStr,
                         CreatedAt = DateTime.Now,
                         Subfolders = folders,
@@ -427,17 +436,153 @@ namespace BlendHub.Pages
             DragOverlay_Drop(sender, e);
         }
 
+        public class SelectedBlendResult
+        {
+            public string BlendFile { get; set; } = string.Empty;
+            public bool AutoUpdate { get; set; }
+        }
+
+        private async Task<SelectedBlendResult?> PromptSelectBlendFileAsync(string title, string message, List<string> filePaths, string rootPath)
+        {
+            var autoUpdateToggle = new ToggleSwitch
+            {
+                Header = "Auto Update Primary .blend File",
+                IsOn = false,
+                Margin = new Thickness(0, 4, 0, 8)
+            };
+
+            var listbox = new ListView
+            {
+                SelectionMode = ListViewSelectionMode.Single,
+                MaxHeight = 220,
+                Margin = new Thickness(0, 8, 0, 0)
+            };
+
+            var lastModifiedFile = filePaths
+                .Select(fp => new FileInfo(fp))
+                .OrderByDescending(f => f.LastWriteTime)
+                .FirstOrDefault();
+
+            string primaryRelativePath = lastModifiedFile != null ? Path.GetRelativePath(rootPath, lastModifiedFile.FullName) : "";
+
+            void PopulateListBox()
+            {
+                listbox.Items.Clear();
+                if (autoUpdateToggle.IsOn)
+                {
+                    if (!string.IsNullOrEmpty(primaryRelativePath))
+                    {
+                        listbox.Items.Add(primaryRelativePath);
+                    }
+                }
+                else
+                {
+                    foreach (var fp in filePaths)
+                    {
+                        listbox.Items.Add(Path.GetRelativePath(rootPath, fp));
+                    }
+                }
+
+                if (listbox.Items.Count > 0)
+                {
+                    listbox.SelectedIndex = 0;
+                }
+            }
+
+            autoUpdateToggle.Toggled += (s, args) => PopulateListBox();
+            PopulateListBox();
+
+            var stack = new StackPanel { Spacing = 8, Margin = new Thickness(0, 4, 0, 0) };
+            stack.Children.Add(new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, FontSize = 14 });
+            stack.Children.Add(autoUpdateToggle);
+            stack.Children.Add(listbox);
+
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = stack,
+                PrimaryButtonText = "Select File",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.XamlRoot,
+                Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                RequestedTheme = (App.MainWindow.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default,
+                CloseButtonStyle = Application.Current.Resources["DefaultButtonStyle"] as Style
+            };
+
+            dialog.IsPrimaryButtonEnabled = listbox.SelectedItem != null;
+            listbox.SelectionChanged += (s, e) =>
+            {
+                dialog.IsPrimaryButtonEnabled = listbox.SelectedItem != null;
+            };
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary && listbox.SelectedItem != null)
+            {
+                return new SelectedBlendResult
+                {
+                    BlendFile = listbox.SelectedItem.ToString() ?? string.Empty,
+                    AutoUpdate = autoUpdateToggle.IsOn
+                };
+            }
+            return null;
+        }
+
         private async Task ProcessDroppedFolderAsync(Windows.Storage.StorageFolder folder)
         {
             if (folder == null) return;
             string path = folder.Path;
-            var blendFiles = Directory.GetFiles(path, "*.blend");
-            if (blendFiles.Length == 0) return;
-
-            string mainBlend = blendFiles[0];
             if (_allProjects.Any(p => p.Path == path)) return;
 
-            // Automatically scan for existing subdirectories
+            var rootBlendFiles = Directory.GetFiles(path, "*.blend");
+            string? chosenBlendFile = null;
+            bool autoUpdate = false;
+
+            if (rootBlendFiles.Length == 1)
+            {
+                chosenBlendFile = Path.GetFileName(rootBlendFiles[0]);
+            }
+            else if (rootBlendFiles.Length > 1)
+            {
+                var selectionResult = await PromptSelectBlendFileAsync(
+                    "Select Primary File",
+                    "Multiple '.blend' files were detected at the root. Please select the primary file for this project:",
+                    rootBlendFiles.ToList(),
+                    path);
+                
+                if (selectionResult == null) return;
+                chosenBlendFile = selectionResult.BlendFile;
+                autoUpdate = selectionResult.AutoUpdate;
+            }
+            else
+            {
+                var allBlendFiles = Directory.GetFiles(path, "*.blend", SearchOption.AllDirectories);
+                if (allBlendFiles.Length == 0)
+                {
+                    var errorDialog = new ContentDialog
+                    {
+                        Title = "No Blender Files Found",
+                        Content = $"No '.blend' files were discovered inside '{folder.Name}' or any of its nested folders. Please select a valid Blender project directory.",
+                        CloseButtonText = "OK",
+                        XamlRoot = this.XamlRoot,
+                        Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                        RequestedTheme = (App.MainWindow.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default
+                    };
+                    await errorDialog.ShowAsync();
+                    return;
+                }
+
+                var selectionResult = await PromptSelectBlendFileAsync(
+                    "Scan Nested Folders",
+                    "No '.blend' files were detected in the root directory, but files were discovered inside subfolders. Is this the correct project folder? Please select a primary file to proceed:",
+                    allBlendFiles.ToList(),
+                    path);
+
+                if (selectionResult == null) return;
+                chosenBlendFile = selectionResult.BlendFile;
+                autoUpdate = selectionResult.AutoUpdate;
+            }
+
             var subfolders = Directory.GetDirectories(path)
                 .Select(d => System.IO.Path.GetFileName(d))
                 .ToList();
@@ -446,7 +591,8 @@ namespace BlendHub.Pages
             {
                 Name = folder.Name,
                 Path = path,
-                BlendFileName = Path.GetFileName(mainBlend),
+                BlendFileName = chosenBlendFile,
+                AutoUpdatePrimaryBlend = autoUpdate,
                 CreatedAt = DateTime.Now,
                 BlenderVersion = "Unknown",
                 Subfolders = subfolders

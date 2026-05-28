@@ -16,7 +16,7 @@ namespace BlendHub.Pages
     {
         private readonly BlenderSettingsService _blenderService = new();
         public ObservableCollection<Project> RecentProjects { get; } = new ObservableCollection<Project>();
-        public string Greeting => $"Welcome Back, {AppSettingsService.Instance.Settings.UserName}!";
+
 
         public HomePage()
         {

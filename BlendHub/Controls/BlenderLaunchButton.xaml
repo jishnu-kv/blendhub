@@ -9,7 +9,8 @@
 
     <SplitButton x:Name="MainSplitButton"
                  Click="MainSplitButton_Click"
-                 VerticalAlignment="Center">
+                 VerticalAlignment="Center"
+                 HorizontalAlignment="Stretch">
         <StackPanel Orientation="Horizontal" Spacing="8">
             <FontIcon Glyph="{x:Bind IconGlyph, Mode=OneWay}" FontSize="14" />
             <TextBlock Text="{x:Bind Text, Mode=OneWay}" />

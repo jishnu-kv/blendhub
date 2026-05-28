@@ -31,7 +31,25 @@ namespace BlendHub.Services
                 if (File.Exists(ProjectsFilePath))
                 {
                     string json = File.ReadAllText(ProjectsFilePath);
-                    return JsonSerializer.Deserialize<List<Project>>(json) ?? new List<Project>();
+                    var projects = JsonSerializer.Deserialize<List<Project>>(json) ?? new List<Project>();
+                    bool anyUpdated = false;
+                    foreach (var p in projects)
+                    {
+                        if (p.AutoUpdatePrimaryBlend)
+                        {
+                            var oldFile = p.BlendFileName;
+                            AutoUpdateProjectPrimaryBlendFile(p);
+                            if (p.BlendFileName != oldFile)
+                            {
+                                anyUpdated = true;
+                            }
+                        }
+                    }
+                    if (anyUpdated)
+                    {
+                        SaveProjects(projects);
+                    }
+                    return projects;
                 }
             }
             catch (Exception) { }
@@ -245,6 +263,33 @@ namespace BlendHub.Services
 
             Debug.WriteLine("[ProjectService] Python check completed but returned 'Unknown'.");
             return "Unknown";
+        }
+
+        public static void AutoUpdateProjectPrimaryBlendFile(Project project)
+        {
+            if (project == null || !project.AutoUpdatePrimaryBlend || !Directory.Exists(project.Path))
+                return;
+
+            try
+            {
+                var files = Directory.GetFiles(project.Path, "*.blend");
+                if (files.Length > 0)
+                {
+                    var lastModifiedFile = files
+                        .Select(f => new FileInfo(f))
+                        .OrderByDescending(f => f.LastWriteTime)
+                        .FirstOrDefault();
+
+                    if (lastModifiedFile != null && lastModifiedFile.Name != project.BlendFileName)
+                    {
+                        project.BlendFileName = lastModifiedFile.Name;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ProjectService] AutoUpdateProjectPrimaryBlendFile error: {ex.Message}");
+            }
         }
     }
 }

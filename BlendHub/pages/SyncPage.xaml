@@ -13,17 +13,15 @@
         <CollectionViewSource x:Name="GroupedSyncItems" />
     </Page.Resources>
 
-    <Grid Padding="32,32,32,0">
-
-
+    <Grid Padding="36,36,36,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid x:Name="HeaderGrid" Grid.Row="0" Margin="0,0,0,20" ColumnDefinitions="*, Auto" RowSpacing="6">
+        <Grid x:Name="HeaderGrid" Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="*, Auto" RowSpacing="6">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -31,21 +29,19 @@
 
             <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
                 <TextBlock Text="Sync Settings"
-                           FontSize="28"
-                           FontFamily="Segoe UI Variable Display"
-                           FontWeight="SemiBold"
+                           Style="{StaticResource TitleTextBlockStyle}"
                            AutomationProperties.HeadingLevel="Level1" />
                 <TextBlock Grid.Row="1"
                            Text="Synchronize preferences and addons between installed versions."
-                           FontSize="14"
+                           Style="{StaticResource BodyTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </StackPanel>
 
             <StackPanel x:Name="ActionPanel" Grid.Column="1" Grid.RowSpan="2" Orientation="Horizontal"
                 Spacing="16" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <StackPanel VerticalAlignment="Center" Spacing="4">
-                    <TextBlock x:Name="StatusText" Text="" FontWeight="Medium"
-                        HorizontalAlignment="Right" FontSize="13"
+                    <TextBlock x:Name="StatusText" Text="" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="Medium"
+                        HorizontalAlignment="Right"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <ProgressBar x:Name="SyncProgressBar" Value="0" Maximum="100" Height="4"
                         MinWidth="120" IsIndeterminate="False" Opacity="0" />
@@ -64,7 +60,7 @@
         </Grid>
 
         <!-- Info Bars -->
-        <StackPanel x:Name="InfoBarPanel" Grid.Row="1" Spacing="4" Margin="0,0,0,16" HorizontalAlignment="Stretch">
+        <StackPanel x:Name="InfoBarPanel" Grid.Row="2" Spacing="4" Margin="0" HorizontalAlignment="Stretch">
             <InfoBar x:Name="WarningInfoBar" IsOpen="False" IsClosable="True" Severity="Warning"
                 Title="" Message="" Closed="InfoBar_Closed" HorizontalAlignment="Stretch" />
             <InfoBar x:Name="ErrorInfoBar" IsOpen="False" IsClosable="True" Severity="Error"
@@ -74,8 +70,8 @@
         </StackPanel>
 
         <!-- Main Content -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
-            VerticalContentAlignment="Stretch" Padding="0,0,0,0">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+            VerticalContentAlignment="Stretch">
             <StackPanel Spacing="16" Padding="0">
 
                 <StackPanel Spacing="6">
@@ -101,7 +97,7 @@
                         CornerRadius="4">
                         <controls:SettingsExpander.Items>
                             <controls:SettingsCard ContentAlignment="Vertical"
-                                HorizontalAlignment="Stretch" Padding="60,16" CornerRadius="0" Margin="0,0,0,0">
+                                HorizontalAlignment="Stretch" Padding="60,16" CornerRadius="0">
                                 <ItemsRepeater x:Name="TargetVersionsListView"
                                     HorizontalAlignment="Stretch">
                                     <ItemsRepeater.Layout>
@@ -131,7 +127,7 @@
                         <controls:SettingsExpander.Items>
                             <controls:SettingsCard ContentAlignment="Vertical"
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                Padding="60,16" CornerRadius="0" Margin="0,0,0,0">
+                                Padding="60,16" CornerRadius="0">
                                 <ItemsRepeater x:Name="SyncItemsRepeater"
                                     ItemsSource="{Binding Source={StaticResource GroupedSyncItems}}"
                                     HorizontalAlignment="Stretch">
@@ -142,10 +138,9 @@
                                         <DataTemplate>
                                             <StackPanel HorizontalAlignment="Stretch">
                                                 <TextBlock Text="{Binding Key}"
-                                                    FontSize="14"
-                                                    FontWeight="SemiBold"
-                                                    Margin="0,0,0,12"
-                                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                                     Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                     Margin="0,0,0,12"
+                                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
 
                                                 <ItemsRepeater ItemsSource="{Binding Items}">
                                                     <ItemsRepeater.ItemTemplate>

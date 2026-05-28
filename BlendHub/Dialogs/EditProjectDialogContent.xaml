@@ -47,6 +47,11 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
 
+                    <!-- Auto Update Primary Blend File (ToggleSwitch) -->
+                    <ToggleSwitch x:Name="AutoUpdatePrimaryBlendToggle"
+                                  Header="Auto Update Primary .blend File"
+                                  Margin="0,4,0,0"/>
+
                     <!-- Primary Blend File (Editable) -->
                     <ComboBox x:Name="PrimaryBlendFileComboBox" 
                               Header="Primary Blend File" 

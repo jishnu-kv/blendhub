@@ -32,7 +32,6 @@ namespace BlendHub.Pages
         {
             var settings = AppSettingsService.Instance.Settings;
             BackupLocationTextBox.Text = settings.BackupDirectory;
-            UserNameTextBox.Text = settings.UserName;
             AutoDetectVersionToggle.IsOn = settings.AutoDetectBlenderVersion;
             ExpandFoldersToggle.IsOn = settings.ExpandFoldersByDefault;
 
@@ -77,26 +76,7 @@ namespace BlendHub.Pages
             }
         }
 
-        private void UserNameTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            SaveUserName();
-        }
 
-        private void UserNameTextBox_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
-        {
-            if (e.Key == Windows.System.VirtualKey.Enter)
-            {
-                this.Focus(FocusState.Programmatic);
-                e.Handled = true;
-                SaveUserName();
-            }
-        }
-
-        private void SaveUserName()
-        {
-            AppSettingsService.Instance.Settings.UserName = UserNameTextBox.Text;
-            AppSettingsService.Instance.Save();
-        }
 
         private void DefaultPageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {

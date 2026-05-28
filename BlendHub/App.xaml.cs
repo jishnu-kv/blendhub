@@ -28,15 +28,6 @@ namespace BlendHub
         /// <param name="args">Details about the launch request and process.</param>
         protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            // Check if this is the first run
-            if (AppSettingsService.Instance.Settings.IsFirstRun)
-            {
-                // Show setup window on first run
-                var setupWindow = new SetupWindow();
-                setupWindow.Activate();
-                return;
-            }
-
             // Create main window but show splash screen first
             MainWindow = new MainWindow();
             MainWindow.ShowSplashScreen();

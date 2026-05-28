@@ -1,11 +1,11 @@
 using BlendHub.Models;
-using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
@@ -16,208 +16,127 @@ namespace BlendHub.Helpers
     {
         private static readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.All });
         private const string BaseUrl = "https://download.blender.org/release/";
+        private const string JsonFileName = "blender_versions.json";
+
+        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            WriteIndented = true
+        };
 
         private static string GetAppDirectory()
         {
             try
             {
-                // For packaged apps (MSIX), use InstalledLocation
                 if (Package.Current != null)
-                {
                     return Package.Current.InstalledLocation.Path;
-                }
             }
             catch
             {
                 // Package.Current throws in unpackaged mode
             }
-            // Fallback to base directory for unpackaged apps
             return AppContext.BaseDirectory;
         }
 
-        private static string GetRoamingDatabasePath()
+        private static string GetRoamingJsonPath()
         {
             var roamingPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var BlendHubPath = Path.Combine(roamingPath, "BlendHub");
+            var blendHubPath = Path.Combine(roamingPath, "BlendHub");
 
-            if (!Directory.Exists(BlendHubPath))
-            {
-                Directory.CreateDirectory(BlendHubPath);
-            }
+            if (!Directory.Exists(blendHubPath))
+                Directory.CreateDirectory(blendHubPath);
 
-            return Path.Combine(BlendHubPath, "blender_versions_web.db");
-        }
-
-        private static string GetConnectionString()
-        {
-            var path = GetRoamingDatabasePath();
-            return $"Data Source={path};Cache=Shared;Pooling=false;";
+            return Path.Combine(blendHubPath, JsonFileName);
         }
 
         /// <summary>
-        /// Initialize database by copying from app package to roaming folder on first run
+        /// Initialize by copying bundled JSON from app package to roaming folder on first run.
         /// </summary>
         public static async Task InitializeDatabaseAsync()
         {
             try
             {
-                var roamingDbPath = GetRoamingDatabasePath();
+                var roamingJsonPath = GetRoamingJsonPath();
 
                 Debug.WriteLine($"[WebDB] InitializeDatabaseAsync called");
-                Debug.WriteLine($"[WebDB] Roaming path: {roamingDbPath}");
-                Debug.WriteLine($"[WebDB] Roaming file exists: {File.Exists(roamingDbPath)}");
+                Debug.WriteLine($"[WebDB] Roaming path: {roamingJsonPath}");
+                Debug.WriteLine($"[WebDB] Roaming file exists: {File.Exists(roamingJsonPath)}");
 
-                // Check if database already exists in roaming folder
-                if (!File.Exists(roamingDbPath))
+                if (!File.Exists(roamingJsonPath))
                 {
-                    Debug.WriteLine("[WebDB] Database not found in roaming folder, copying from app package...");
+                    Debug.WriteLine("[WebDB] JSON not found in roaming folder, copying from app package...");
 
-                    // Copy from app installation directory
-                    var appDbPath = Path.Combine(GetAppDirectory(), "blender_versions_web.db");
+                    var appJsonPath = Path.Combine(GetAppDirectory(), JsonFileName);
 
-                    Debug.WriteLine($"[WebDB] Looking for source at: {appDbPath}");
-                    Debug.WriteLine($"[WebDB] Source file exists: {File.Exists(appDbPath)}");
+                    Debug.WriteLine($"[WebDB] Looking for source at: {appJsonPath}");
+                    Debug.WriteLine($"[WebDB] Source file exists: {File.Exists(appJsonPath)}");
 
-                    if (File.Exists(appDbPath))
+                    if (File.Exists(appJsonPath))
                     {
-                        File.Copy(appDbPath, roamingDbPath, true);
-                        Debug.WriteLine($"[WebDB] Copied database to: {roamingDbPath}");
+                        File.Copy(appJsonPath, roamingJsonPath, overwrite: true);
+                        Debug.WriteLine($"[WebDB] Copied JSON to: {roamingJsonPath}");
                     }
                     else
                     {
-                        Debug.WriteLine($"[WebDB] Source database not found at: {appDbPath}");
-                        // Create empty database with schema
-                        await CreateEmptyDatabaseAsync();
+                        Debug.WriteLine("[WebDB] Source JSON not found — creating empty file.");
+                        await File.WriteAllTextAsync(roamingJsonPath, "[]");
                     }
                 }
                 else
                 {
-                    Debug.WriteLine($"[WebDB] Database already exists at: {roamingDbPath}");
+                    Debug.WriteLine($"[WebDB] JSON already exists at: {roamingJsonPath}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[WebDB] Error initializing database: {ex.Message}");
+                Debug.WriteLine($"[WebDB] Error initializing: {ex.Message}");
                 Debug.WriteLine($"[WebDB] Stack trace: {ex.StackTrace}");
                 throw;
             }
         }
 
-        private static async Task CreateEmptyDatabaseAsync()
-        {
-            using (var connection = new SqliteConnection(GetConnectionString()))
-            {
-                await connection.OpenAsync();
-
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = @"
-                        CREATE TABLE IF NOT EXISTS Versions (
-                            Id TEXT PRIMARY KEY,
-                            Version TEXT NOT NULL,
-                            Directory TEXT NOT NULL,
-                            LastUpdated TEXT NOT NULL
-                        );
-
-                        CREATE TABLE IF NOT EXISTS Installers (
-                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            VersionId TEXT NOT NULL,
-                            Filename TEXT NOT NULL,
-                            Url TEXT NOT NULL,
-                            ReleaseDate TEXT NOT NULL,
-                            SizeBytes INTEGER NOT NULL,
-                            FOREIGN KEY(VersionId) REFERENCES Versions(Id)
-                        );
-
-                        CREATE INDEX IF NOT EXISTS idx_version_id ON Installers(VersionId);
-                    ";
-                    await command.ExecuteNonQueryAsync();
-                }
-            }
-
-            Debug.WriteLine("[WebDB] Created empty database with schema");
-        }
-
         /// <summary>
-        /// Get all versions from database
+        /// Load all versions from the roaming JSON file.
+        /// Returns a dictionary keyed by short version (e.g. "4.2").
         /// </summary>
         public static async Task<Dictionary<string, BlenderVersionJsonInfo>> GetAllVersionsAsync()
         {
             var result = new Dictionary<string, BlenderVersionJsonInfo>();
-            var roamingDbPath = GetRoamingDatabasePath();
+            var jsonPath = GetRoamingJsonPath();
 
-            // Don't try to open if file doesn't exist - SQLite would create empty file
-            if (!File.Exists(roamingDbPath))
+            if (!File.Exists(jsonPath))
             {
-                Debug.WriteLine("[WebDB] Database file doesn't exist, returning empty result");
+                Debug.WriteLine("[WebDB] JSON file not found, returning empty result.");
                 return result;
             }
 
             try
             {
-                using (var connection = new SqliteConnection(GetConnectionString()))
+                var json = await File.ReadAllTextAsync(jsonPath);
+                var list = JsonSerializer.Deserialize<List<BlenderVersionJsonInfo>>(json, _jsonOptions);
+
+                if (list != null)
                 {
-                    await connection.OpenAsync();
-
-                    // Step 1: Load all versions
-                    using (var command = connection.CreateCommand())
+                    foreach (var item in list)
                     {
-                        command.CommandText = "SELECT Id, Version FROM Versions ORDER BY Id DESC";
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                var versionId = reader.GetString(0);
-                                var version = reader.GetString(1);
-
-                                result[versionId] = new BlenderVersionJsonInfo
-                                {
-                                    Version = version,
-                                    WindowsInstallers = new List<WindowsInstaller>()
-                                };
-                            }
-                        }
-                    }
-
-                    // Step 2: Load all installers in one query and group them in memory
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = @"
-                            SELECT VersionId, Filename, Url, ReleaseDate, SizeBytes 
-                            FROM Installers";
-
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                var versionId = reader.GetString(0);
-                                if (result.TryGetValue(versionId, out var versionInfo))
-                                {
-                                    versionInfo.WindowsInstallers.Add(new WindowsInstaller
-                                    {
-                                        Filename = reader.GetString(1),
-                                        Url = reader.GetString(2),
-                                        ReleaseDate = reader.IsDBNull(3) ? "Unknown" : reader.GetString(3),
-                                        SizeBytes = reader.GetInt64(4)
-                                    });
-                                }
-                            }
-                        }
+                        var key = VersionHelper.GetShortVersion(item.Version);
+                        if (!string.IsNullOrEmpty(key) && !result.ContainsKey(key))
+                            result[key] = item;
                     }
                 }
 
-                Debug.WriteLine($"[WebDB] Retrieved {result.Count} versions from database");
+                Debug.WriteLine($"[WebDB] Loaded {result.Count} versions from JSON.");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[WebDB] Error retrieving versions: {ex.Message}");
+                Debug.WriteLine($"[WebDB] Error reading JSON: {ex.Message}");
             }
 
             return result;
         }
 
         /// <summary>
-        /// Refresh database by scraping the Blender release website
+        /// Refresh by scraping the Blender release website and saving results to JSON.
         /// </summary>
         public static async Task RefreshDatabaseAsync()
         {
@@ -228,50 +147,61 @@ namespace BlendHub.Helpers
                 var html = await _httpClient.GetStringAsync(BaseUrl);
                 var versionDirs = ParseDirectoryListing(html, BaseUrl)
                     .Where(e => e.Name.StartsWith("Blender", StringComparison.OrdinalIgnoreCase))
-                    .OrderByDescending(e => VersionHelper.ParseVersion(e.Name.StartsWith("Blender", StringComparison.OrdinalIgnoreCase) ? e.Name.Substring(7) : e.Name))
+                    .OrderByDescending(e => VersionHelper.ParseVersion(
+                        e.Name.StartsWith("Blender", StringComparison.OrdinalIgnoreCase) ? e.Name.Substring(7) : e.Name))
                     .ToList();
 
-                Debug.WriteLine($"[WebDB] Found {versionDirs.Count} version directories. Scraping most recent versions...");
+                Debug.WriteLine($"[WebDB] Found {versionDirs.Count} version directories. Scraping most recent...");
 
-                using (var connection = new SqliteConnection(GetConnectionString()))
+                // Load existing data to merge with
+                var existing = await GetAllVersionsAsync();
+
+                // Scan top 15 newest versions
+                var versionsToScan = versionDirs.Take(15).ToList();
+
+                foreach (var dir in versionsToScan)
                 {
-                    await connection.OpenAsync();
+                    var dirname = dir.Name;
+                    var versionStr = dirname.StartsWith("Blender", StringComparison.OrdinalIgnoreCase)
+                        ? dirname.Substring(7)
+                        : dirname;
+                    var shortVersion = VersionHelper.GetShortVersion(versionStr);
 
-                    // Limit to top 20 newest versions for speed, or scan all if needed.
-                    // Let's do top 15 for a good balance of speed and coverage.
-                    var versionsToScan = versionDirs.Take(15).ToList();
+                    Debug.WriteLine($"[WebDB] Scraping: {dirname}...");
 
-                    foreach (var dir in versionsToScan)
+                    try
                     {
-                        var dirname = dir.Name;
-                        var versionStr = dirname.StartsWith("Blender", StringComparison.OrdinalIgnoreCase) ? dirname.Substring(7) : dirname;
-                        var versionId = VersionHelper.GetShortVersion(versionStr);
+                        var subHtml = await _httpClient.GetStringAsync(dir.Url);
+                        var files = ParseDirectoryListing(subHtml, dir.Url);
+                        var windowsFiles = files.Where(f => IsWindowsInstaller(f.Name)).ToList();
 
-                        Debug.WriteLine($"[WebDB] Scraping version directory: {dirname}...");
-
-                        try
+                        if (windowsFiles.Any())
                         {
-                            var subHtml = await _httpClient.GetStringAsync(dir.Url);
-                            var files = ParseDirectoryListing(subHtml, dir.Url);
-                            var windowsFiles = files.Where(f => IsWindowsInstaller(f.Name)).ToList();
-
-                            if (windowsFiles.Any())
+                            var installers = windowsFiles.Select(f => new WindowsInstaller
                             {
-                                await UpsertVersionAsync(connection, versionId, versionStr, dirname);
-                                foreach (var f in windowsFiles)
-                                {
-                                    await InsertInstallerAsync(connection, versionId, f.Name, f.Url, f.Date, f.SizeBytes);
-                                }
-                            }
+                                Filename = f.Name,
+                                Url = f.Url,
+                                ReleaseDate = f.Date,
+                                SizeBytes = f.SizeBytes
+                            }).ToList();
+
+                            existing[shortVersion] = new BlenderVersionJsonInfo
+                            {
+                                Version = versionStr,
+                                WindowsInstallers = installers
+                            };
                         }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"[WebDB] Failed to scrape {dirname}: {ex.Message}");
-                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[WebDB] Failed to scrape {dirname}: {ex.Message}");
                     }
                 }
 
-                Debug.WriteLine("[WebDB] Web refresh complete");
+                // Save back to roaming JSON
+                await SaveJsonAsync(existing.Values.OrderByDescending(v => VersionHelper.ParseVersion(v.Version)).ToList());
+
+                Debug.WriteLine("[WebDB] Web refresh complete.");
             }
             catch (Exception ex)
             {
@@ -280,12 +210,18 @@ namespace BlendHub.Helpers
             }
         }
 
+        private static async Task SaveJsonAsync(IEnumerable<BlenderVersionJsonInfo> versions)
+        {
+            var jsonPath = GetRoamingJsonPath();
+            var json = JsonSerializer.Serialize(versions.ToList(), _jsonOptions);
+            await File.WriteAllTextAsync(jsonPath, json);
+            Debug.WriteLine($"[WebDB] Saved {versions.Count()} versions to {jsonPath}");
+        }
+
         private static List<(string Name, string Url, string Date, long SizeBytes)> ParseDirectoryListing(string html, string baseUrl)
         {
             var results = new List<(string Name, string Url, string Date, long SizeBytes)>();
 
-            // Regex to match Apache directory listing entries
-            // Pattern: <a href="filename">filename</a>   DD-Mon-YYYY HH:MM   SIZE
             var matches = Regex.Matches(html, @"<a href=""([^""]+)"">[^<]+</a>\s+(\d{2}-\w{3}-\d{4}\s+\d{2}:\d{2})\s+([\d-]+|-)");
 
             foreach (Match m in matches)
@@ -314,48 +250,9 @@ namespace BlendHub.Helpers
             return hasKeyword && windowsExts.Contains(ext);
         }
 
-        private static async Task UpsertVersionAsync(SqliteConnection conn, string id, string version, string directory)
-        {
-            using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = @"
-                    INSERT OR REPLACE INTO Versions (Id, Version, Directory, LastUpdated)
-                    VALUES (@id, @version, @dir, @now)";
-                cmd.Parameters.AddWithValue("@id", id);
-                cmd.Parameters.AddWithValue("@version", version);
-                cmd.Parameters.AddWithValue("@dir", directory);
-                cmd.Parameters.AddWithValue("@now", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"));
-                await cmd.ExecuteNonQueryAsync();
-            }
-        }
-
-        private static async Task InsertInstallerAsync(SqliteConnection conn, string versionId, string filename, string url, string date, long size)
-        {
-            using (var cmd = conn.CreateCommand())
-            {
-                // Check if already exists to avoid duplicates
-                cmd.CommandText = "SELECT COUNT(*) FROM Installers WHERE VersionId = @vId AND Filename = @file";
-                cmd.Parameters.AddWithValue("@vId", versionId);
-                cmd.Parameters.AddWithValue("@file", filename);
-                var countObj = await cmd.ExecuteScalarAsync();
-                long count = countObj != null ? (long)countObj : 0;
-
-                if (count == 0)
-                {
-                    cmd.CommandText = @"
-                        INSERT INTO Installers (VersionId, Filename, Url, ReleaseDate, SizeBytes)
-                        VALUES (@vId, @file, @url, @date, @size)";
-                    cmd.Parameters.AddWithValue("@url", url);
-                    cmd.Parameters.AddWithValue("@date", date);
-                    cmd.Parameters.AddWithValue("@size", size);
-                    await cmd.ExecuteNonQueryAsync();
-                }
-            }
-        }
-
         /// <summary>
-        /// Get database path for diagnostics
+        /// Get JSON path for diagnostics.
         /// </summary>
-        public static string GetDatabasePath() => GetRoamingDatabasePath();
+        public static string GetDatabasePath() => GetRoamingJsonPath();
     }
 }

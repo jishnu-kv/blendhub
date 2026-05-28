@@ -87,9 +87,17 @@ namespace BlendHub.Dialogs
                 PrimaryBlendFileComboBox.SelectedItem = blendFiles.FirstOrDefault(f => f == project.BlendFileName)
                     ?? blendFiles.FirstOrDefault();
             }
+
+            AutoUpdatePrimaryBlendToggle.IsOn = project.AutoUpdatePrimaryBlend;
+            PrimaryBlendFileComboBox.IsEnabled = !project.AutoUpdatePrimaryBlend;
+            AutoUpdatePrimaryBlendToggle.Toggled += (s, args) =>
+            {
+                PrimaryBlendFileComboBox.IsEnabled = !AutoUpdatePrimaryBlendToggle.IsOn;
+            };
         }
 
         public string? BlendFileName => PrimaryBlendFileComboBox.SelectedItem?.ToString();
+        public bool AutoUpdatePrimaryBlend => AutoUpdatePrimaryBlendToggle.IsOn;
 
         public Project Project => _project;
         public List<string> OriginalFolderNames => _originalFolderNames;

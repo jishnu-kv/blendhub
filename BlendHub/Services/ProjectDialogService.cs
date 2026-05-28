@@ -111,6 +111,8 @@ namespace BlendHub.Services
             var result = await dialog.ShowAsync();
             if (result == ContentDialogResult.Primary)
             {
+                project.AutoUpdatePrimaryBlend = content.AutoUpdatePrimaryBlend;
+
                 if (content.SelectedVersion != null && !string.IsNullOrEmpty(content.SelectedVersion.Version))
                     project.BlenderVersion = content.SelectedVersion.Version;
 
@@ -122,6 +124,12 @@ namespace BlendHub.Services
                     .Where(l => !string.IsNullOrWhiteSpace(l.Extension) && !string.IsNullOrWhiteSpace(l.ProgramPath))
                     .GroupBy(l => l.Extension.ToLowerInvariant())
                     .ToDictionary(g => g.Key, g => g.First().ProgramPath);
+
+                // Run auto-update check immediately if turned on
+                if (project.AutoUpdatePrimaryBlend)
+                {
+                    ProjectService.AutoUpdateProjectPrimaryBlendFile(project);
+                }
 
                 // Save to data source
                 ProjectService.UpdateProject(project);

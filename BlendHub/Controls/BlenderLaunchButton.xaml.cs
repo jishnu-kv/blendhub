@@ -58,6 +58,15 @@ namespace BlendHub.Controls
             set => SetValue(ShowManageOptionsProperty, value);
         }
 
+        public static readonly DependencyProperty FilePathProperty =
+            DependencyProperty.Register("FilePath", typeof(string), typeof(BlenderLaunchButton), new PropertyMetadata(string.Empty));
+
+        public string FilePath
+        {
+            get => (string)GetValue(FilePathProperty);
+            set => SetValue(FilePathProperty, value);
+        }
+
         public event Action? RequestRefresh;
 
         public BlenderLaunchButton()
@@ -67,7 +76,11 @@ namespace BlendHub.Controls
 
         private void MainSplitButton_Click(SplitButton sender, SplitButtonClickEventArgs e)
         {
-            if (Project != null)
+            if (!string.IsNullOrEmpty(FilePath))
+            {
+                LaunchProjectFile(FilePath);
+            }
+            else if (Project != null)
             {
                 LaunchProject(Project);
             }
@@ -123,10 +136,55 @@ namespace BlendHub.Controls
                     {
                         if (s is MenuFlyoutItem mi && mi.Tag is BlenderVersionInfo info)
                         {
-                            LaunchProject(Project, info);
+                            if (!string.IsNullOrEmpty(FilePath))
+                            {
+                                LaunchProjectFile(FilePath, info);
+                            }
+                            else
+                            {
+                                LaunchProject(Project, info);
+                            }
                         }
                     };
                     flyout.Items.Add(item);
+                }
+            }
+
+            if (string.IsNullOrEmpty(FilePath) && Directory.Exists(Project.Path))
+            {
+                try
+                {
+                    var allFiles = Directory.GetFiles(Project.Path, "*.blend", SearchOption.AllDirectories)
+                        .Select(f => Path.GetRelativePath(Project.Path, f))
+                        .ToList();
+
+                    if (allFiles.Count > 1)
+                    {
+                        flyout.Items.Add(new MenuFlyoutSeparator());
+                        var filesSubItem = new MenuFlyoutSubItem { Text = "Launch Secondary File", Icon = new FontIcon { Glyph = "\uE7C3" } };
+                        
+                        foreach (var relPath in allFiles)
+                        {
+                            var fileItem = new MenuFlyoutItem { Text = relPath };
+                            if (relPath == Project.BlendFileName)
+                            {
+                                fileItem.Text += " (Primary)";
+                                fileItem.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+                            }
+                            
+                            fileItem.Click += (s, args) =>
+                            {
+                                var targetPath = Path.Combine(Project.Path, relPath);
+                                LaunchProjectFile(targetPath);
+                            };
+                            filesSubItem.Items.Add(fileItem);
+                        }
+                        flyout.Items.Add(filesSubItem);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[BlenderLaunchButton] Error scanning secondary files: {ex.Message}");
                 }
             }
 
@@ -143,6 +201,35 @@ namespace BlendHub.Controls
                 deleteItem.Click += async (s, args) =>
                     await ProjectDialogService.ShowDeleteConfirmAsync(Project, this.XamlRoot, () => RequestRefresh?.Invoke());
                 flyout.Items.Add(deleteItem);
+            }
+        }
+
+        private void LaunchProjectFile(string fullPath, BlenderVersionInfo? specificVersion = null)
+        {
+            try
+            {
+                if (File.Exists(fullPath))
+                {
+                    var versionToUse = specificVersion;
+                    if (versionToUse == null && Project != null)
+                    {
+                        var versions = _blenderService.GetInstalledVersions();
+                        versionToUse = versions.FirstOrDefault(v => v.Version == Project.BlenderVersion);
+                    }
+
+                    if (versionToUse != null && !string.IsNullOrEmpty(versionToUse.ExecutablePath) && File.Exists(versionToUse.ExecutablePath))
+                    {
+                        Process.Start(new ProcessStartInfo(versionToUse.ExecutablePath, $"\"{fullPath}\"") { UseShellExecute = true });
+                    }
+                    else
+                    {
+                        Process.Start(new ProcessStartInfo(fullPath) { UseShellExecute = true });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[BlenderLaunchButton] Error launching secondary file: {ex.Message}");
             }
         }
 

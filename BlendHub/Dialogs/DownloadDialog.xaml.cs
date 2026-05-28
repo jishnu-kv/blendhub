@@ -332,7 +332,7 @@ namespace BlendHub.Dialogs
             {
                 // Pause download
                 _isPaused = true;
-                PauseResumeIcon.Glyph = "\uE768"; // Play/Resume glyph
+                PauseResumeIcon.Glyph = "\uE8E5"; // Play/Resume glyph
                 PauseResumeText.Text = "Resume";
                 DialogProgressText.Text = $"Paused: {FormatBytes(_totalBytesRead)} of {FormatBytes(_contentLength)}";
 

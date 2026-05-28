@@ -92,7 +92,7 @@ namespace BlendHub
 
                     // Set minimum window size
                     presenter.PreferredMinimumWidth = 840;
-                    presenter.PreferredMinimumHeight = 500;
+                    presenter.PreferredMinimumHeight = 650;
                 }
             }
 

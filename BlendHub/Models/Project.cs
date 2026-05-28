@@ -73,6 +73,7 @@ namespace BlendHub.Models
         public string Name { get; set; } = string.Empty;
         public string Path { get; set; } = string.Empty;
         public string BlendFileName { get; set; } = string.Empty;
+        public bool AutoUpdatePrimaryBlend { get; set; } = false;
         public List<string> Subfolders { get; set; } = new List<string>();
         public string BlenderVersion { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.Now;

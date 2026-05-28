@@ -516,17 +516,6 @@ namespace BlendHub.Pages
             }
         }
 
-        private void CopyPathButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (AddonsListView.SelectedItem is not AddonItem item) return;
-
-            var dp = new DataPackage();
-            dp.SetText(item.Path);
-            Clipboard.SetContent(dp);
-
-            ShowSuccess("Copied", "Full path copied to clipboard.");
-        }
-
         private void WebsiteButton_Click(object sender, RoutedEventArgs e)
         {
             if (AddonsListView.SelectedItem is not AddonItem item || string.IsNullOrEmpty(item.WebsiteUrl)) return;
@@ -718,7 +707,7 @@ namespace BlendHub.Pages
         private void UpdateInfoBarPanelMargin()
         {
             bool anyOpen = SuccessInfoBar.IsOpen || WarningInfoBar.IsOpen || ErrorInfoBar.IsOpen;
-            InfoBarPanel.Margin = new Thickness(24, 0, 24, anyOpen ? 8 : 0);
+            InfoBarPanel.Margin = new Thickness(0, 0, 0, anyOpen ? 7 : 0);
         }
 
         private async void TabSegmented_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -791,7 +780,13 @@ namespace BlendHub.Pages
             ApplyFilters();
 
             // Step 2: Asynchronously sync with the live API in the background
-            BackgroundUpdatePanel.Visibility = Visibility.Visible;
+            var selectedItem = TabSegmented?.SelectedItem as CommunityToolkit.WinUI.Controls.SegmentedItem;
+            var currentTab = selectedItem?.Tag?.ToString() ?? "Installed";
+
+            if (currentTab == "Market" && _onlineAddons.Count == 0)
+            {
+                BackgroundUpdatePanel.Visibility = Visibility.Visible;
+            }
 
             try
             {

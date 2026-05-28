@@ -36,40 +36,28 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         
-        <!-- Header -->
-        <Grid x:Name="HeaderGrid" Margin="32,32,32,0" RowSpacing="6">
+        <Grid x:Name="HeaderGrid" Margin="36,36,36,0" RowSpacing="6">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <TextBlock x:Name="PageHeader"
                        Text="Settings"
-                       FontSize="28"
-                       FontFamily="Segoe UI Variable Display"
-                       FontWeight="SemiBold"
+                       Style="{StaticResource TitleTextBlockStyle}"
                        AutomationProperties.HeadingLevel="Level1" />
             <TextBlock Grid.Row="1"
                        Text="Configure default directories, launchers, and themes."
-                       FontSize="14"
+                       Style="{StaticResource BodyTextBlockStyle}"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </Grid>
             
         <ScrollView
             Grid.Row="1"
-            Padding="32,32,32,0"
+            Padding="36,8,36,0"
             VerticalScrollBarVisibility="Auto"
             VerticalScrollMode="Auto">
             <Border>
                 <StackPanel Spacing="{StaticResource SettingsCardSpacing}">
-                
-                <!-- User Profile Section -->
-                <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" Text="User profile" />
-
-                <controls:SettingsCard Description="Set the name that will be used for greetings throughout the app."
-                                       Header="Username"
-                                       HeaderIcon="{ui:FontIcon Glyph=&#xE77B;}">
-                    <TextBox x:Name="UserNameTextBox" Width="200" VerticalAlignment="Center" LostFocus="UserNameTextBox_LostFocus" KeyDown="UserNameTextBox_KeyDown" />
-                </controls:SettingsCard>
 
                 <!-- Appearance & Personalization Section -->
                 <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" Text="Appearance &amp; personalization" />
@@ -185,7 +173,7 @@
                             <controls:SettingsCard CornerRadius="0" Margin="0,-1,0,0">
                                 <controls:SettingsCard.Header>
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <TextBlock Text="File type" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13" />
+                                        <TextBlock Text="File type" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" />
                                         <TextBox Text="{x:Bind Extension, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                                  PlaceholderText=".psd" 
                                                  VerticalAlignment="Center" Width="80"
@@ -195,7 +183,7 @@
                                 </controls:SettingsCard.Header>
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
                                     <TextBlock Grid.Column="0" Text="Program path:" VerticalAlignment="Center" 
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}"
                                                Visibility="{x:Bind ProgramPath, Converter={StaticResource StringToVisibilityConverter}, Mode=OneWay}" />
                                     <TextBlock Grid.Column="1"
                                              Text="{x:Bind ProgramPath, Mode=OneWay}" 

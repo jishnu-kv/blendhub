@@ -72,6 +72,11 @@
                             </StackPanel>
                         </Button>
                     </Grid>
+
+                    <!-- Auto Update Primary Blend File (ToggleSwitch) -->
+                    <ToggleSwitch x:Name="AutoUpdatePrimaryBlendToggle"
+                                  Header="Auto Update Primary .blend File"
+                                  Margin="0,4,0,0"/>
                 </StackPanel>
 
                 <!-- Separator -->

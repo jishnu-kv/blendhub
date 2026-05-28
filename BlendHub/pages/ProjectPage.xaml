@@ -24,7 +24,7 @@
         </Grid.RowDefinitions>
         
         <!-- Fixed Header Section -->
-        <StackPanel Grid.Row="0" Spacing="16" Padding="32,32,32,8">
+        <StackPanel Grid.Row="0" Spacing="16" Padding="36,36,36,8">
             <!-- Header -->
             <Grid ColumnDefinitions="*, Auto" RowSpacing="6">
                 <Grid.RowDefinitions>
@@ -32,13 +32,11 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock Text="Projects"
-                           FontSize="28"
-                           FontFamily="Segoe UI Variable Display"
-                           FontWeight="SemiBold"
+                           Style="{StaticResource TitleTextBlockStyle}"
                            AutomationProperties.HeadingLevel="Level1" />
                 <TextBlock Grid.Row="1"
                            Text="Create, import, and manage your Blender projects."
-                           FontSize="14"
+                           Style="{StaticResource BodyTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 <Button x:Name="CreateProjectBtn" 
                         Grid.Column="1"
@@ -75,7 +73,7 @@
             <!-- Projects List Header with Search and Sort -->
             <StackPanel x:Name="ProjectsListContainer" Spacing="8">
                 <!-- Section Header with Search and Sort -->
-                <Grid x:Name="ProjectsHeaderGrid" Visibility="Visible" Margin="0,0,0,0">
+                <Grid x:Name="ProjectsHeaderGrid" Visibility="Visible">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -155,52 +153,8 @@
         </StackPanel>
 
         <!-- Scrollable Content Section -->
-        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="32,16,32,0">
+        <ScrollViewer x:Name="ProjectsScrollViewer" Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="36,16,36,0">
             <StackPanel Spacing="16">
-
-                <!-- Drag and Drop Zone (Visible only when no projects exist) -->
-                <Border x:Name="DropZone"
-                        AllowDrop="True"
-                        DragOver="DropZone_DragOver"
-                        Drop="DropZone_Drop"
-                        CornerRadius="8"
-                        Padding="0"
-                        MinHeight="180">
-                    <Grid>
-                        <Rectangle Stroke="{ThemeResource TextFillColorTertiaryBrush}"
-                                   StrokeThickness="1.5"
-                                   StrokeDashArray="2,2"
-                                   RadiusX="8"
-                                   RadiusY="8"
-                                   Fill="Transparent"
-                                   Margin="0"/>
-                        
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" Padding="40,0">
-                            <FontIcon Glyph="&#xE8E5;" FontSize="32" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Drag and drop to add project"
-                                           HorizontalAlignment="Center"
-                                           FontWeight="SemiBold"
-                                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                <TextBlock Text="Drop a folder containing .blend files here"
-                                           FontSize="12"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                           HorizontalAlignment="Center"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <Button x:Name="BrowseProjectBtn"
-                                    Click="BrowseProjectBtn_Click"
-                                    Style="{StaticResource DefaultButtonStyle}"
-                                    Padding="16,8">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon Glyph="&#xED25;" FontSize="14"/>
-                                    <TextBlock Text="Browse for project folder" FontSize="13"/>
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
                 <!-- Projects List -->
                 <ListView x:Name="ProjectsList"
                           SelectionMode="None"
@@ -209,12 +163,13 @@
                         <Style TargetType="ListViewItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
                             <Setter Property="MinHeight" Value="0"/>
                         </Style>
                     </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="models:Project">
-                            <custom:ProjectCardView Project="{x:Bind}" />
+                            <custom:ProjectCardView Project="{x:Bind}"/>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
@@ -222,10 +177,57 @@
                 <!-- No Search Results Message -->
                 <StackPanel x:Name="NoSearchResultsPanel" Spacing="16" Margin="0,40,0,0" HorizontalAlignment="Center" Visibility="Collapsed">
                     <FontIcon Glyph="&#xE94C;" FontSize="48" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                    <TextBlock Text="No projects found matching your search." Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="No Projects Found" Style="{StaticResource BodyLargeStrongTextBlockStyle}" HorizontalAlignment="Center" />
+                    <TextBlock Text="We couldn't find any projects matching your search." Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" />
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Empty Projects View (Visible only when no projects exist) -->
+        <Grid x:Name="DropZone"
+              Grid.Row="1"
+              AllowDrop="True"
+              DragOver="DropZone_DragOver"
+              Drop="DropZone_Drop"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch"
+              Padding="36">
+            
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24" MaxWidth="480">
+                <Image Source="ms-appx:///Assets/empty_project.png"
+                       MaxHeight="260"
+                       MaxWidth="340"
+                       HorizontalAlignment="Center"
+                       Stretch="Uniform" />
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Your Creative Workspace is Empty"
+                               Style="{StaticResource SubtitleTextBlockStyle}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                    
+                    <TextBlock Text="Create a brand new Blender project, import an existing folder, or simply drag and drop your project folders containing .blend files anywhere here to get started."
+                               Style="{StaticResource BodyTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+
+                <Button x:Name="BrowseProjectBtn"
+                        Click="BrowseProjectBtn_Click"
+                        Style="{StaticResource DefaultButtonStyle}"
+                        Height="36"
+                        Padding="16,0"
+                        HorizontalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE8B7;" FontSize="14"/>
+                        <TextBlock Text="Import Existing Folder" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
 
         <!-- Full-Page Drag Overlay -->
         <Grid x:Name="DragOverlay"

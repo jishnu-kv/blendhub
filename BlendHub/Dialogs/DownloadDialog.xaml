@@ -69,8 +69,7 @@
 
         <!-- Installers List with ScrollViewer -->
         <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      MaxHeight="360"
-                      Padding="0,0,0,0">
+                      MaxHeight="360">
             <StackPanel>
                 <ItemsControl x:Name="DialogInstallersList">
                     <ItemsControl.ItemsPanel>

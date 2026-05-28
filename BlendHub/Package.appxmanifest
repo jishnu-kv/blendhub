@@ -9,15 +9,15 @@
   IgnorableNamespaces="uap rescap systemai">
 
   <Identity
-    Name="8a28a3ce-066b-4a2b-8741-0a611aa701cc"
-    Publisher="CN=jishn"
+    Name="BlendHub"
+    Publisher="CN=Jishnu"
     Version="1.0.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="8a28a3ce-066b-4a2b-8741-0a611aa701cc" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>Blend Hub</DisplayName>
-    <PublisherDisplayName>jishn</PublisherDisplayName>
+    <DisplayName>BlendHub</DisplayName>
+    <PublisherDisplayName>Jishnu</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -40,7 +40,8 @@
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"  Square71x71Logo="Assets\SmallTile.png" Square310x310Logo="Assets\LargeTile.png">
+        </uap:DefaultTile >
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
     </Application>

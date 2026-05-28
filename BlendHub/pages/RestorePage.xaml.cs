@@ -333,7 +333,7 @@ namespace BlendHub.Pages
         private void UpdateInfoBarSpacing()
         {
             bool anyOpen = WarningInfoBar.IsOpen || ErrorInfoBar.IsOpen || SuccessInfoBar.IsOpen;
-            InfoBarPanel.Margin = new Thickness(0, 0, 0, anyOpen ? 8 : 0);
+            InfoBarPanel.Margin = anyOpen ? new Thickness(0, 16, 0, 16) : new Thickness(0);
         }
     }
 }

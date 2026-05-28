@@ -62,6 +62,7 @@ namespace BlendHub.Dialogs
         public string FileName => FileNameTextBox.Text;
         public string ProjectLocation => ProjectLocationTextBox.Text;
         public BlenderVersionInfo? SelectedVersion => BlenderVersionComboBox.SelectedItem as BlenderVersionInfo;
+        public bool AutoUpdatePrimaryBlend => AutoUpdatePrimaryBlendToggle.IsOn;
 
         // Public setters for edit mode
         public void SetProjectName(string name) => ProjectNameTextBox.Text = name;

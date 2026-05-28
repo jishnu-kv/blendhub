@@ -14,15 +14,15 @@
         <CollectionViewSource x:Name="GroupedBackupItems" />
     </Page.Resources>
 
-    <Grid Padding="32,32,32,0">
+    <Grid Padding="36,36,36,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid x:Name="HeaderGrid" Grid.Row="0" Margin="0,0,0,20" ColumnDefinitions="*, Auto" RowSpacing="6">
+        <Grid x:Name="HeaderGrid" Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="*, Auto" RowSpacing="6">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -30,21 +30,19 @@
 
             <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
                 <TextBlock Text="Backup Settings"
-                           FontSize="28"
-                           FontFamily="Segoe UI Variable Display"
-                           FontWeight="SemiBold"
+                           Style="{StaticResource TitleTextBlockStyle}"
                            AutomationProperties.HeadingLevel="Level1" />
                 <TextBlock Grid.Row="1"
                            Text="Save your Blender preferences, addons, and configurations."
-                           FontSize="14"
+                           Style="{StaticResource BodyTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </StackPanel>
 
             <StackPanel x:Name="ActionPanel" Grid.Column="1" Grid.RowSpan="2" Orientation="Horizontal"
                 Spacing="16" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <StackPanel VerticalAlignment="Center" Spacing="4">
-                    <TextBlock x:Name="StatusText" Text="" FontWeight="Medium"
-                        HorizontalAlignment="Right" FontSize="13"
+                    <TextBlock x:Name="StatusText" Text="" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="Medium"
+                        HorizontalAlignment="Right"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <ProgressBar x:Name="BackupProgressBar" Value="0" Maximum="100" Height="4"
                         MinWidth="120" IsIndeterminate="False" Opacity="0" />
@@ -63,18 +61,18 @@
         </Grid>
 
         <!-- Info Bars -->
-        <StackPanel x:Name="InfoBarPanel" Grid.Row="1" Spacing="4" Margin="0,0,0,16" HorizontalAlignment="Stretch">
+        <StackPanel x:Name="InfoBarPanel" Grid.Row="2" Spacing="4" Margin="0" HorizontalAlignment="Stretch">
             <InfoBar x:Name="WarningInfoBar" IsOpen="False" IsClosable="True" Severity="Warning"
-                Title="" Message="" Closed="InfoBar_Closed" HorizontalAlignment="Stretch"/>
+                Title="" Message="" Closed="InfoBar_Closed" HorizontalAlignment="Stretch" />
             <InfoBar x:Name="ErrorInfoBar" IsOpen="False" IsClosable="True" Severity="Error"
-                Title="" Message="" Closed="InfoBar_Closed" HorizontalAlignment="Stretch"/>
+                Title="" Message="" Closed="InfoBar_Closed" HorizontalAlignment="Stretch" />
             <InfoBar x:Name="SuccessInfoBar" IsOpen="False" IsClosable="True" Severity="Success"
-                Title="Backup Complete" Message="" Closed="InfoBar_Closed" HorizontalAlignment="Stretch"/>
+                Title="Backup Complete" Message="" Closed="InfoBar_Closed" HorizontalAlignment="Stretch" />
         </StackPanel>
 
         <!-- Main Content -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
-            VerticalContentAlignment="Stretch" Padding="0,0,0,0">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+            VerticalContentAlignment="Stretch">
             <StackPanel Spacing="16" Padding="0">
 
                 <StackPanel Spacing="6">
@@ -90,7 +88,7 @@
                                 SelectionChanged="VersionComboBox_SelectionChanged"
                                 DisplayMemberPath="DisplayName" />
                             <TextBlock x:Name="VersionPathText"
-                                FontSize="11"
+                                Style="{StaticResource CaptionTextBlockStyle}"
                                 Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                 FontStyle="Italic"
                                 TextWrapping="Wrap"
@@ -108,7 +106,7 @@
                         <controls:SettingsExpander.Items>
                             <controls:SettingsCard ContentAlignment="Vertical"
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                Padding="60,16" CornerRadius="0" Margin="0,0,0,0">
+                                Padding="60,16" CornerRadius="0">
                                 <ItemsRepeater x:Name="BackupItemsRepeater"
                                     ItemsSource="{Binding Source={StaticResource GroupedBackupItems}}"
                                     HorizontalAlignment="Stretch">
@@ -119,10 +117,9 @@
                                         <DataTemplate>
                                             <StackPanel HorizontalAlignment="Stretch" Margin="0">
                                                 <TextBlock Text="{Binding Key}"
-                                                    FontSize="14"
-                                                    FontWeight="SemiBold"
-                                                    Margin="0,0,0,12"
-                                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                                     Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                     Margin="0,0,0,12"
+                                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
 
                                                 <ItemsRepeater ItemsSource="{Binding Items}">
                                                     <ItemsRepeater.ItemTemplate>
@@ -160,7 +157,7 @@
                                 <ItemsRepeater.ItemTemplate>
                                     <DataTemplate>
                                         <controls:SettingsCard Header="{Binding}"
-                                            ContentAlignment="Right" Padding="60,16" CornerRadius="0" Margin="0,0,0,0">
+                                            ContentAlignment="Right" Padding="60,16" CornerRadius="0">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <Button Click="OpenItem_Click" Tag="{Binding}"
                                                     ToolTipService.ToolTip="Open folder">
@@ -211,14 +208,14 @@
 
                                 <!-- Name -->
                                 <TextBlock Grid.Column="1" Text="{Binding Name}" 
-                                    FontSize="13" VerticalAlignment="Center"
+                                    Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"
                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
 
                                 <!-- Status Badge/Pill -->
                                 <Border Grid.Column="2" Padding="8,2" CornerRadius="4"
                                     Background="{Binding StatusPillBackground}">
                                     <TextBlock Text="{Binding StatusText}" 
-                                        FontSize="10" FontWeight="SemiBold"
+                                        Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"
                                         Foreground="{Binding StatusBrush}" />
                                 </Border>
                             </Grid>
