@@ -27,6 +27,32 @@ namespace BlendHub.Pages
         {
             base.OnNavigatedTo(e);
             LoadVersions();
+
+            if (App.MainWindow != null)
+            {
+                App.MainWindow.Activated += MainWindow_Activated;
+            }
+        }
+
+        protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            if (App.MainWindow != null)
+            {
+                App.MainWindow.Activated -= MainWindow_Activated;
+            }
+        }
+
+        private void MainWindow_Activated(object sender, WindowActivatedEventArgs e)
+        {
+            if (e.WindowActivationState != WindowActivationState.Deactivated)
+            {
+                if (SourceVersionComboBox.SelectedItem is BlenderVersionInfo sourceInfo)
+                {
+                    RefreshItems(sourceInfo.ConfigPath);
+                    RefreshTargetVersions(sourceInfo.Version);
+                }
+            }
         }
 
         private void LoadVersions()
@@ -89,7 +115,6 @@ namespace BlendHub.Pages
 
                 WarningInfoBar.IsOpen = true;
                 if (SuccessInfoBar != null) SuccessInfoBar.IsOpen = false;
-                UpdateInfoBarSpacing();
 
                 EnableAllExpanders(_targetVersions.Count > 0);
             }
@@ -103,49 +128,11 @@ namespace BlendHub.Pages
 
         private void RefreshItems(string versionPath)
         {
-            _syncItems.Clear();
-            var items = _blenderService.GetDefaultBackupItems(versionPath);
-            foreach (var item in items)
-            {
-                var vm = new ConfigItemViewModel
-                {
-                    Name = item.Name,
-                    IsEnabled = item.IsEnabled,
-                    IsExists = item.Exists,
-                    TooltipText = item.Category,
-                    Category = item.Category,
-                    RelativePath = item.RelativePath,
-                    IsFolder = item.IsFolder
-                };
-                vm.PropertyChanged += (s, e) => ValidateSyncState();
-                _syncItems.Add(vm);
-            }
-
-            // Group by category and update view
-            var groups = _syncItems
-                .GroupBy(i => i.Category)
-                .OrderBy(g => GetCategoryOrder(g.Key))
-                .Select(g => new CategoryGroup
-                {
-                    Key = g.Key,
-                    Items = g.ToList()
-                })
-                .ToList();
-
-            GroupedSyncItems.Source = groups;
+            BlenderPageHelper.RefreshConfigItems(_syncItems, versionPath, _blenderService, 
+                (vm) => ValidateSyncState(), GroupedSyncItems);
             ValidateSyncState();
         }
 
-        private int GetCategoryOrder(string category)
-        {
-            return category switch
-            {
-                "Extensions & Tools" => 1,
-                "Preferences & Configuration" => 2,
-                "History & Recent Data" => 3,
-                _ => 99
-            };
-        }
 
         private void RefreshTargetVersions(string sourceVersion)
         {
@@ -178,7 +165,6 @@ namespace BlendHub.Pages
                 WarningInfoBar.Title = "No Source Selected";
                 WarningInfoBar.Message = "Please select a source Blender version.";
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
                 return;
             }
 
@@ -188,7 +174,6 @@ namespace BlendHub.Pages
                 WarningInfoBar.Title = "No Items Selected";
                 WarningInfoBar.Message = "Please enable at least one item to include in the sync.";
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
                 return;
             }
 
@@ -198,8 +183,19 @@ namespace BlendHub.Pages
                 WarningInfoBar.Title = "No Target Versions";
                 WarningInfoBar.Message = "Please select at least one target Blender version to sync to.";
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
                 return;
+            }
+
+            // Version mismatch check (New to Old)
+            bool hasCriticalItems = enabledItems.Any(i => i.Name == "Preferences" || i.Name == "Startup File");
+            var olderTargets = selectedTargets.Where(t => BlenderPageHelper.IsVersionNewer(sourceInfo.Version, t.Version)).ToList();
+
+            if (hasCriticalItems && olderTargets.Count > 0)
+            {
+                var targetVersions = string.Join(", ", olderTargets.Select(t => t.Version));
+                var result = await BlenderPageHelper.ShowVersionMismatchDialog(this, sourceInfo.Version, targetVersions, "syncing");
+                if (result != ContentDialogResult.Primary)
+                    return;
             }
 
             StartSyncButton.IsEnabled = false;
@@ -225,7 +221,6 @@ namespace BlendHub.Pages
                     {
                         DispatcherQueue.TryEnqueue(() =>
                         {
-                            StatusText.Text = $"Syncing {target.DisplayName}: {msg}";
                             SyncProgressBar.IsIndeterminate = false;
                             SyncProgressBar.Value = ((double)currentTarget + progress) / totalTargets * 100;
                         });
@@ -233,19 +228,15 @@ namespace BlendHub.Pages
                     currentTarget++;
                 }
 
-                StatusText.Text = "Sync completed successfully!";
                 SuccessInfoBar.Message = $"Settings synced to {selectedTargets.Count} Blender version(s).";
                 SuccessInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
             }
             catch (Exception ex)
             {
-                StatusText.Text = $"Error: {ex.Message}";
                 WarningInfoBar.Severity = InfoBarSeverity.Error;
                 WarningInfoBar.Title = "Sync Failed";
                 WarningInfoBar.Message = ex.Message;
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
             }
             finally
             {
@@ -268,12 +259,20 @@ namespace BlendHub.Pages
             if (SourceVersionCard != null) SourceVersionCard.IsEnabled = enable;
         }
 
-        private void InfoBar_Closed(InfoBar sender, InfoBarClosedEventArgs args) => UpdateInfoBarSpacing();
-
-        private void UpdateInfoBarSpacing()
+        private void LaunchBlenderButton_Click(object sender, RoutedEventArgs e)
         {
-            bool anyOpen = WarningInfoBar.IsOpen || ErrorInfoBar.IsOpen || SuccessInfoBar.IsOpen;
-            InfoBarPanel.Margin = anyOpen ? new Thickness(0, 16, 0, 16) : new Thickness(0);
+            var selectedTargets = _targetVersions.Where(v => v.IsSelected).ToList();
+            if (selectedTargets.Count > 0)
+            {
+                var firstTarget = selectedTargets.First();
+                var allVersions = _blenderService.GetInstalledVersions();
+                var targetVersion = allVersions.FirstOrDefault(v => v.Version == firstTarget.Version);
+                if (targetVersion != null)
+                {
+                    BlenderPageHelper.LaunchBlender(targetVersion, _blenderService);
+                }
+            }
         }
+
     }
 }

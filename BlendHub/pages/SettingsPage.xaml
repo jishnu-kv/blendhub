@@ -94,10 +94,16 @@
                     <ToggleSwitch x:Name="AutoDetectVersionToggle" VerticalAlignment="Center" Toggled="AutoDetectVersionToggle_Toggled" />
                 </controls:SettingsCard>
 
-                <controls:SettingsCard Description="Automatically expand project folders in the locations tab."
-                                       Header="Expand Folders by Default"
+                <controls:SettingsCard Description="Automatically expand project details by default."
+                                       Header="Expand Projects by Default"
                                        HeaderIcon="{ui:FontIcon Glyph=&#xE8F4;}">
                     <ToggleSwitch x:Name="ExpandFoldersToggle" VerticalAlignment="Center" Toggled="ExpandFoldersToggle_Toggled" />
+                </controls:SettingsCard>
+
+                <controls:SettingsCard Description="Only show .blend files from the root and immediate subfolders, ignoring deeper nested files."
+                                       Header="Filter Nested Blend Files"
+                                       HeaderIcon="{ui:FontIcon Glyph=&#xE71C;}">
+                    <ToggleSwitch x:Name="FilterNestedBlendFilesToggle" VerticalAlignment="Center" Toggled="FilterNestedBlendFilesToggle_Toggled" />
                 </controls:SettingsCard>
 
                 <!-- Default Project Folders Configuration -->

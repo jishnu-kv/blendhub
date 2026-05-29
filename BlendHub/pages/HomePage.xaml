@@ -27,61 +27,165 @@
                                Text="Manage Blender versions, addons, backups, and recent projects."
                                Style="{StaticResource BodyTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <Button Grid.Column="1"
-                            Grid.RowSpan="2"
-                            Click="ViewAllProjects_Click"
-                            Style="{StaticResource AccentButtonStyle}"
-                            VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE710;" FontSize="14" />
-                            <TextBlock Text="New Project" />
-                        </StackPanel>
-                    </Button>
                 </Grid>
 
-                <!-- Installed Versions -->
-                <StackPanel Spacing="16">
-                    <Grid ColumnDefinitions="*, Auto">
-                        <TextBlock Text="Installed Versions" Style="{StaticResource BodyLargeStrongTextBlockStyle}" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" />
-                        <Button Grid.Column="1" Click="RefreshButton_Click" Style="{StaticResource SubtleButtonStyle}" ToolTipService.ToolTip="Refresh">
-                            <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                <!-- Quick Actions -->
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Quick Actions" Style="{StaticResource BodyLargeStrongTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" />
+                    <Grid ColumnSpacing="12" RowSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Create New Project -->
+                        <Button Grid.Column="0" HorizontalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="CreateProjectQuickAction_Click">
+                            <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                <Grid Width="44" Height="44" HorizontalAlignment="Center">
+                                    <Border CornerRadius="22" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
+                                    <FontIcon Glyph="&#xE710;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Grid>
+                                <TextBlock Text="Create Project" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" FontSize="13" />
+                                <TextBlock Text="Set up a new workspace &amp; blend file" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Reference Board -->
+                        <Button Grid.Column="1" HorizontalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="ReferenceBoardQuickAction_Click">
+                            <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                <Grid Width="44" Height="44" HorizontalAlignment="Center">
+                                    <Border CornerRadius="22" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
+                                    <FontIcon Glyph="&#xEB9F;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Grid>
+                                <TextBlock Text="Reference Board" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" FontSize="13" />
+                                <TextBlock Text="Organize design assets &amp; inspiration" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Manage Addons -->
+                        <Button Grid.Column="2" HorizontalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="ManageAddonsQuickAction_Click">
+                            <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                <Grid Width="44" Height="44" HorizontalAlignment="Center">
+                                    <Border CornerRadius="22" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
+                                    <FontIcon Glyph="&#xE74C;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Grid>
+                                <TextBlock Text="Manage Addons" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" FontSize="13" />
+                                <TextBlock Text="Install and configure blender add-ons" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Download Blender -->
+                        <Button Grid.Column="3" HorizontalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="DownloadBlenderQuickAction_Click">
+                            <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                <Grid Width="44" Height="44" HorizontalAlignment="Center">
+                                    <Border CornerRadius="22" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
+                                    <FontIcon Glyph="&#xE896;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Grid>
+                                <TextBlock Text="Download Blender" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" FontSize="13" />
+                                <TextBlock Text="Get latest or stable blender versions" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Create Backup -->
+                        <Button Grid.Column="4" HorizontalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="CreateBackupQuickAction_Click">
+                            <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                <Grid Width="44" Height="44" HorizontalAlignment="Center">
+                                    <Border CornerRadius="22" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
+                                    <FontIcon Glyph="&#xE74E;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Grid>
+                                <TextBlock Text="Create Backup" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" FontSize="13" />
+                                <TextBlock Text="Save preferences, addons &amp; settings" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap" HorizontalAlignment="Center" />
+                            </StackPanel>
                         </Button>
                     </Grid>
-
-                    <ListView x:Name="VersionsGridView" SelectionMode="None" HorizontalAlignment="Stretch">
-                        <ListView.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <ItemsStackPanel Orientation="Vertical" CacheLength="2" />
-                            </ItemsPanelTemplate>
-                        </ListView.ItemsPanel>
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0"/>
-                                <Setter Property="MinHeight" Value="0"/>
-                            </Style>
-                        </ListView.ItemContainerStyle>
-                        <ListView.ItemTemplate>
-                            <DataTemplate x:DataType="services:BlenderVersionInfo">
-                                <toolkit:SettingsCard Margin="0,0,0,6" Header="{x:Bind DisplayName}" Description="{x:Bind ExecutablePath}" Padding="16" IsActionIconVisible="False" IsClickEnabled="False" CornerRadius="4">
-                                    <toolkit:SettingsCard.HeaderIcon>
-                                        <ImageIcon Source="/Assets/blender_logo.png" Width="24" Height="24"/>
-                                    </toolkit:SettingsCard.HeaderIcon>
-                                    <custom:BlenderLaunchButton BlenderVersionInfo="{x:Bind}" Text="Open" IconGlyph="&#xE8E5;" VerticalAlignment="Center" />
-                                </toolkit:SettingsCard>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-
-                    <Grid x:Name="NoVersionsPanel" MinHeight="120" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Visibility="Collapsed">
-                        <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <FontIcon Glyph="&#xE946;" FontSize="28" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                            <TextBlock Text="No Blender installations found" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextAlignment="Center" />
-                            <TextBlock Text="Refresh detection or add a custom Blender executable in Settings." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" />
-                        </StackPanel>
-                    </Grid>
                 </StackPanel>
+
+                <!-- Installed Versions (Microsoft Store Style) -->
+                <Border CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <!-- Container Header -->
+                        <Grid ColumnDefinitions="*, Auto" Padding="16,14,16,14">
+                            <TextBlock Text="Installed Blender Versions" Style="{StaticResource BodyLargeStrongTextBlockStyle}" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" />
+                            <Button Grid.Column="1" Click="RefreshButton_Click" Style="{StaticResource SubtleButtonStyle}" ToolTipService.ToolTip="Refresh">
+                                <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                            </Button>
+                        </Grid>
+
+                        <!-- Divider line -->
+                        <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" />
+
+                        <!-- Versions ListView -->
+                        <ListView x:Name="VersionsGridView" SelectionMode="None" HorizontalAlignment="Stretch" Padding="0,0,0,1">
+                            <ListView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <ItemsStackPanel Orientation="Vertical" CacheLength="2" />
+                                </ItemsPanelTemplate>
+                            </ListView.ItemsPanel>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="MinHeight" Value="0"/>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="services:BlenderVersionInfo">
+                                    <StackPanel>
+                                        <Grid ColumnDefinitions="Auto, *, Auto" Padding="16,16,16,16">
+                                            <!-- Column 0: Logo -->
+                                            <Image Grid.Column="0" Source="/Assets/blender_logo.png" Width="32" Height="32" Margin="0,0,16,0" VerticalAlignment="Center" />
+
+                                            <!-- Column 1: Info -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                                                <TextBlock Text="{x:Bind DisplayName}" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                                                <TextBlock Text="{x:Bind ExecutablePath}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+
+                                            <!-- Column 2: Actions -->
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                <!-- Launch Button with icon -->
+                                                <Button Click="OpenVersion_Click" DataContext="{Binding}" Style="{StaticResource DefaultButtonStyle}" Padding="12,6" Height="32">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <FontIcon Glyph="&#xE8A7;" FontSize="14" />
+                                                        <TextBlock Text="Launch" Style="{StaticResource BodyTextBlockStyle}" />
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <!-- Ellipsis Options -->
+                                                <Button Style="{StaticResource DefaultButtonStyle}" Width="32" Height="32" Padding="0">
+                                                    <FontIcon Glyph="&#xE712;" FontSize="12" />
+                                                    <Button.Flyout>
+                                                        <MenuFlyout Placement="Bottom">
+                                                            <MenuFlyoutItem Text="Open Config Folder" Click="OpenConfigFolder_Click" DataContext="{Binding}">
+                                                                <MenuFlyoutItem.Icon>
+                                                                    <FontIcon Glyph="&#xED25;" />
+                                                                </MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                        </MenuFlyout>
+                                                    </Button.Flyout>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                        <!-- Divider line between rows -->
+                                        <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Visibility="{x:Bind ShowDivider, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <Grid x:Name="NoVersionsPanel" MinHeight="120" Visibility="Collapsed" Padding="16">
+                            <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE946;" FontSize="28" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                <TextBlock Text="No Blender installations found" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextAlignment="Center" />
+                                <TextBlock Text="Refresh detection or add a custom Blender executable in Settings." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
 
                 <!-- Recent Projects Section -->
                 <StackPanel Spacing="16">

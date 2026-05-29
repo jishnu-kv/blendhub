@@ -11,9 +11,11 @@ namespace BlendHub.Services
         public string UserName { get; set; } = string.Empty;
         public string DefaultPage { get; set; } = "home";
         public string LastRunVersion { get; set; } = string.Empty;
+        public string LastBoardCleanupDate { get; set; } = string.Empty;
         public bool IsFirstRun { get; set; } = true;
         public bool AutoDetectBlenderVersion { get; set; } = true;
         public bool ExpandFoldersByDefault { get; set; } = false;
+        public bool FilterNestedBlendFiles { get; set; } = false;
         public System.Collections.Generic.List<string> CustomBlenderPaths { get; set; } = new System.Collections.Generic.List<string>();
         public System.Collections.Generic.List<string> DefaultFolders { get; set; } = new System.Collections.Generic.List<string>
         {

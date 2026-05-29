@@ -1,3 +1,4 @@
+using System;
 using Microsoft.UI.Xaml;
 using BlendHub.Services;
 
@@ -33,29 +34,64 @@ namespace BlendHub
             MainWindow.ShowSplashScreen();
             MainWindow.Activate();
 
-            // Perform actual initialization tasks
-            MainWindow.UpdateSplashStatus("Loading configuration...", 20);
-            var settings = AppSettingsService.Instance.Settings;
-            await System.Threading.Tasks.Task.Delay(300);
-
-            MainWindow.UpdateSplashStatus("Searching for Blender installations...", 50);
-            var blenderService = new BlenderSettingsService();
-            await System.Threading.Tasks.Task.Run(() => blenderService.GetInstalledVersions());
-            await System.Threading.Tasks.Task.Delay(200);
-
-            MainWindow.UpdateSplashStatus("Loading projects...", 80);
-            var loadedProjects = await System.Threading.Tasks.Task.Run(() => ProjectService.LoadProjects());
-            if (AppSettingsService.Instance.Settings.AutoDetectBlenderVersion)
+            try
             {
-                await ProjectService.DetectProjectVersionsAsync(loadedProjects);
+                // Perform actual initialization tasks
+                MainWindow.UpdateSplashStatus("Loading configuration...", 20);
+                var settings = AppSettingsService.Instance.Settings;
+                await System.Threading.Tasks.Task.Delay(300);
+
+                // Clean up temp images daily on first launch
+                try
+                {
+                    await src.Models.BoardPersistence.CleanUpTempImagesAsync();
+                }
+                catch (Exception cleanupEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[App] Temp images cleanup failed: {cleanupEx.Message}");
+                }
+
+                MainWindow.UpdateSplashStatus("Searching for Blender installations...", 50);
+                var blenderService = new BlenderSettingsService();
+                try
+                {
+                    await System.Threading.Tasks.Task.Run(() => blenderService.GetInstalledVersions());
+                }
+                catch (Exception blenderEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[App] Scan Blender installations failed: {blenderEx.Message}");
+                }
+                await System.Threading.Tasks.Task.Delay(200);
+
+                MainWindow.UpdateSplashStatus("Loading projects...", 80);
+                try
+                {
+                    var loadedProjects = await System.Threading.Tasks.Task.Run(() => ProjectService.LoadProjects());
+                    if (AppSettingsService.Instance.Settings.AutoDetectBlenderVersion)
+                    {
+                        await ProjectService.DetectProjectVersionsAsync(loadedProjects);
+                    }
+                }
+                catch (Exception projectEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[App] Loading projects failed: {projectEx.Message}");
+                }
+                await System.Threading.Tasks.Task.Delay(300);
+
+                MainWindow.UpdateSplashStatus("Ready", 100);
+                await System.Threading.Tasks.Task.Delay(200);
             }
-            await System.Threading.Tasks.Task.Delay(300);
-
-            MainWindow.UpdateSplashStatus("Ready", 100);
-            await System.Threading.Tasks.Task.Delay(200);
-
-            // Transition to main UI
-            MainWindow.RestoreMainContent();
+            catch (Exception initEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[App] General startup initialization failed: {initEx.Message}");
+                MainWindow.UpdateSplashStatus("Startup error occurred, continuing...", 100);
+                await System.Threading.Tasks.Task.Delay(1000);
+            }
+            finally
+            {
+                // Transition to main UI
+                MainWindow.RestoreMainContent();
+            }
         }
 
         public static MainWindow MainWindow { get; set; } = null!;

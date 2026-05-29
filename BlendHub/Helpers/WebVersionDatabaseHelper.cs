@@ -14,7 +14,10 @@ namespace BlendHub.Helpers
 {
     public static class WebVersionDatabaseHelper
     {
-        private static readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.All });
+        private static readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.All })
+        {
+            Timeout = TimeSpan.FromSeconds(15)
+        };
         private const string BaseUrl = "https://download.blender.org/release/";
         private const string JsonFileName = "blender_versions.json";
 

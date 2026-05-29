@@ -45,6 +45,9 @@ namespace BlendHub.Services
         public string Copyright { get; set; } = string.Empty;
         public string Permissions { get; set; } = string.Empty;
         public long ArchiveSize { get; set; }
+
+        public List<string> BlenderVersions { get; set; } = new();
+        public List<string> InstallationPaths { get; set; } = new();
     }
 
     public class AddonService
@@ -66,24 +69,52 @@ namespace BlendHub.Services
             {
                 await Task.Run(() =>
                 {
-                    // Scan subdirectories
-                    foreach (var dir in Directory.GetDirectories(legacyPath))
+                    try
                     {
-                        var folderName = Path.GetFileName(dir);
-                        if (folderName.StartsWith(".") || folderName.StartsWith("_") || IgnoredFolders.Contains(folderName))
-                            continue;
+                        // Scan subdirectories
+                        foreach (var dir in Directory.GetDirectories(legacyPath))
+                        {
+                            try
+                            {
+                                var folderName = Path.GetFileName(dir);
+                                if (folderName.StartsWith(".") || folderName.StartsWith("_") || IgnoredFolders.Contains(folderName))
+                                    continue;
 
-                        addons.Add(ParseLegacyAddon(dir, blenderVersion));
+                                addons.Add(ParseLegacyAddon(dir, blenderVersion));
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[AddonService] Failed to scan legacy addon dir '{dir}': {ex.Message}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[AddonService] Failed to read legacy directories from '{legacyPath}': {ex.Message}");
                     }
 
-                    // Scan single-file .py addons
-                    foreach (var file in Directory.GetFiles(legacyPath, "*.py"))
+                    try
                     {
-                        var fileName = Path.GetFileName(file);
-                        if (fileName.StartsWith(".") || fileName.StartsWith("_") || fileName.Equals("__init__.py"))
-                            continue;
+                        // Scan single-file .py addons
+                        foreach (var file in Directory.GetFiles(legacyPath, "*.py"))
+                        {
+                            try
+                            {
+                                var fileName = Path.GetFileName(file);
+                                if (fileName.StartsWith(".") || fileName.StartsWith("_") || fileName.Equals("__init__.py"))
+                                    continue;
 
-                        addons.Add(ParseLegacyAddon(file, blenderVersion));
+                                addons.Add(ParseLegacyAddon(file, blenderVersion));
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[AddonService] Failed to scan legacy addon file '{file}': {ex.Message}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[AddonService] Failed to read legacy files from '{legacyPath}': {ex.Message}");
                     }
                 });
             }
@@ -94,21 +125,42 @@ namespace BlendHub.Services
             {
                 await Task.Run(() =>
                 {
-                    foreach (var repoDir in Directory.GetDirectories(extensionsPath))
+                    try
                     {
-                        var repoName = Path.GetFileName(repoDir);
-                        if (repoName.StartsWith(".") || repoName.StartsWith("_") || IgnoredFolders.Contains(repoName))
-                            continue;
-
-                        // Scan extensions inside repository
-                        foreach (var extDir in Directory.GetDirectories(repoDir))
+                        foreach (var repoDir in Directory.GetDirectories(extensionsPath))
                         {
-                            var extFolderName = Path.GetFileName(extDir);
-                            if (extFolderName.StartsWith(".") || extFolderName.StartsWith("_") || IgnoredFolders.Contains(extFolderName))
-                                continue;
+                            try
+                            {
+                                var repoName = Path.GetFileName(repoDir);
+                                if (repoName.StartsWith(".") || repoName.StartsWith("_") || IgnoredFolders.Contains(repoName))
+                                    continue;
 
-                            addons.Add(ParseExtension(extDir, repoName, blenderVersion));
+                                // Scan extensions inside repository
+                                foreach (var extDir in Directory.GetDirectories(repoDir))
+                                {
+                                    try
+                                    {
+                                        var extFolderName = Path.GetFileName(extDir);
+                                        if (extFolderName.StartsWith(".") || extFolderName.StartsWith("_") || IgnoredFolders.Contains(extFolderName))
+                                            continue;
+
+                                        addons.Add(ParseExtension(extDir, repoName, blenderVersion));
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"[AddonService] Failed to scan extension '{extDir}': {ex.Message}");
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[AddonService] Failed to scan repository directory '{repoDir}': {ex.Message}");
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[AddonService] Failed to read repositories from '{extensionsPath}': {ex.Message}");
                     }
                 });
             }
@@ -129,6 +181,9 @@ namespace BlendHub.Services
                 BlenderVersion = blenderVersion,
                 Name = Path.GetFileNameWithoutExtension(path) // Fallback name
             };
+
+            item.BlenderVersions.Add(blenderVersion);
+            item.InstallationPaths.Add(path);
 
             string pyContent = string.Empty;
             try
@@ -232,6 +287,9 @@ namespace BlendHub.Services
                 BlenderVersion = blenderVersion,
                 Name = Path.GetFileName(path) // Fallback name
             };
+
+            item.BlenderVersions.Add(blenderVersion);
+            item.InstallationPaths.Add(path);
 
             var manifestFile = Path.Combine(path, "blender_manifest.toml");
             if (File.Exists(manifestFile))
@@ -349,10 +407,18 @@ namespace BlendHub.Services
                             case "version":
                                 item.Version = val;
                                 break;
-                            case "author":
-                            case "maintainer":
-                                item.Author = val;
-                                break;
+                             case "author":
+                             case "maintainer":
+                                 {
+                                     string cleanVal = val;
+                                     int ltIdx = cleanVal.IndexOf('<');
+                                     if (ltIdx >= 0)
+                                     {
+                                         cleanVal = cleanVal.Substring(0, ltIdx).Trim();
+                                     }
+                                     item.Author = cleanVal;
+                                 }
+                                 break;
                             case "tagline":
                             case "description":
                                 item.Description = val;
@@ -491,14 +557,51 @@ namespace BlendHub.Services
                             }
                         }
 
+                        string? extensionId = null;
+                        if (isExtension)
+                        {
+                            var manifestEntry = archive.Entries.FirstOrDefault(e => e.Name.Equals("blender_manifest.toml", StringComparison.OrdinalIgnoreCase) || e.Name.EndsWith("/blender_manifest.toml", StringComparison.OrdinalIgnoreCase));
+                            if (manifestEntry != null)
+                            {
+                                try
+                                {
+                                    using (var stream = manifestEntry.Open())
+                                    using (var reader = new StreamReader(stream))
+                                    {
+                                        string content = reader.ReadToEnd();
+                                        var match = Regex.Match(content, @"(?m)^\s*id\s*=\s*[""']([^""']+)[""']");
+                                        if (match.Success)
+                                        {
+                                            extensionId = match.Groups[1].Value.Trim();
+                                        }
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+
                         string extractSubDirName;
-                        if (hasCommonParent)
+                        if (isExtension && !string.IsNullOrEmpty(extensionId))
+                        {
+                            extractSubDirName = extensionId;
+                        }
+                        else if (hasCommonParent)
                         {
                             extractSubDirName = commonParent;
                         }
                         else
                         {
-                            extractSubDirName = Path.GetFileNameWithoutExtension(sourceFilePath);
+                            var name = Path.GetFileNameWithoutExtension(sourceFilePath);
+                            // If it matches name_guid (32 hex characters)
+                            var guidMatch = Regex.Match(name, @"^(.*)_[0-9a-fA-F]{32}$");
+                            if (guidMatch.Success)
+                            {
+                                extractSubDirName = guidMatch.Groups[1].Value;
+                            }
+                            else
+                            {
+                                extractSubDirName = name;
+                            }
                         }
 
                         // Sanitize directory name
@@ -511,28 +614,44 @@ namespace BlendHub.Services
                         }
                         Directory.CreateDirectory(extractPath);
 
-                        foreach (var entry in archive.Entries)
+                        try
                         {
-                            if (string.IsNullOrEmpty(entry.Name)) continue; // Skip directory entry markers
-
-                            string relativePath = entry.FullName;
-                            if (hasCommonParent && relativePath.StartsWith(commonParent))
+                            foreach (var entry in archive.Entries)
                             {
-                                relativePath = relativePath.Substring(commonParent.Length + 1);
+                                if (string.IsNullOrEmpty(entry.Name)) continue; // Skip directory entry markers
+
+                                string relativePath = entry.FullName;
+                                if (hasCommonParent && relativePath.StartsWith(commonParent))
+                                {
+                                    relativePath = relativePath.Substring(commonParent.Length + 1);
+                                }
+
+                                string destinationPath = Path.GetFullPath(Path.Combine(extractPath, relativePath));
+
+                                // Directory safety check (prevent zip slip vulnerability)
+                                if (!destinationPath.StartsWith(extractPath, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    throw new InvalidDataException("Malicious zip path detected.");
+                                }
+
+                                var entryDir = Path.GetDirectoryName(destinationPath);
+                                if (entryDir != null) Directory.CreateDirectory(entryDir);
+
+                                entry.ExtractToFile(destinationPath, true);
                             }
-
-                            string destinationPath = Path.GetFullPath(Path.Combine(extractPath, relativePath));
-
-                            // Directory safety check (prevent zip slip vulnerability)
-                            if (!destinationPath.StartsWith(extractPath, StringComparison.OrdinalIgnoreCase))
+                        }
+                        catch
+                        {
+                            // Clean up partial/corrupted directory extraction
+                            try
                             {
-                                throw new InvalidDataException("Malicious zip path detected.");
+                                if (Directory.Exists(extractPath))
+                                {
+                                    Directory.Delete(extractPath, true);
+                                }
                             }
-
-                            var entryDir = Path.GetDirectoryName(destinationPath);
-                            if (entryDir != null) Directory.CreateDirectory(entryDir);
-
-                            entry.ExtractToFile(destinationPath, true);
+                            catch { }
+                            throw;
                         }
                     }
                 });
@@ -566,6 +685,77 @@ namespace BlendHub.Services
                     throw new FileNotFoundException("Addon files not found on disk.");
                 }
             });
+        }
+
+        /// <summary>
+        /// Syncs (copies) an installed addon to another Blender version's configuration.
+        /// </summary>
+        public async Task SyncAddonAsync(AddonItem item, string targetConfigPath)
+        {
+            if (string.IsNullOrEmpty(item.Path) || (!Directory.Exists(item.Path) && !File.Exists(item.Path)))
+                throw new FileNotFoundException("Source addon files not found.", item.Path);
+
+            if (string.IsNullOrEmpty(targetConfigPath) || !Directory.Exists(targetConfigPath))
+                throw new DirectoryNotFoundException($"Target Blender configuration folder not found at '{targetConfigPath}'.");
+
+            await Task.Run(() =>
+            {
+                string destinationPath;
+                if (item.Type == "Extension")
+                {
+                    var repo = !string.IsNullOrEmpty(item.Repository) ? item.Repository : "user_default";
+                    destinationPath = Path.Combine(targetConfigPath, "extensions", repo, item.FolderName);
+                }
+                else
+                {
+                    // Legacy Addon
+                    if (Directory.Exists(item.Path))
+                    {
+                        destinationPath = Path.Combine(targetConfigPath, "scripts", "addons", item.FolderName);
+                    }
+                    else
+                    {
+                        destinationPath = Path.Combine(targetConfigPath, "scripts", "addons", Path.GetFileName(item.Path));
+                    }
+                }
+
+                // Ensure parent directory exists
+                var parentDir = Path.GetDirectoryName(destinationPath);
+                if (parentDir != null)
+                {
+                    Directory.CreateDirectory(parentDir);
+                }
+
+                if (Directory.Exists(item.Path))
+                {
+                    if (Directory.Exists(destinationPath))
+                    {
+                        Directory.Delete(destinationPath, true);
+                    }
+                    CopyDirectory(item.Path, destinationPath);
+                }
+                else if (File.Exists(item.Path))
+                {
+                    File.Copy(item.Path, destinationPath, true);
+                }
+            });
+        }
+
+        private static void CopyDirectory(string sourceDir, string destinationDir)
+        {
+            Directory.CreateDirectory(destinationDir);
+
+            foreach (string file in Directory.GetFiles(sourceDir))
+            {
+                string destFile = Path.Combine(destinationDir, Path.GetFileName(file));
+                File.Copy(file, destFile, true);
+            }
+
+            foreach (string subDir in Directory.GetDirectories(sourceDir))
+            {
+                string destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
+                CopyDirectory(subDir, destSubDir);
+            }
         }
     }
 }

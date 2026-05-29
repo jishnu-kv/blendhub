@@ -39,13 +39,8 @@
 
             <StackPanel x:Name="ActionPanel" Grid.Column="1" Grid.RowSpan="2" Orientation="Horizontal"
                 Spacing="16" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <StackPanel VerticalAlignment="Center" Spacing="4">
-                    <TextBlock x:Name="StatusText" Text="" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="Medium"
-                        HorizontalAlignment="Right"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <ProgressBar x:Name="RestoreProgressBar" Value="0" Maximum="100" Height="4"
-                        MinWidth="120" IsIndeterminate="False" Opacity="0" />
-                </StackPanel>
+                <ProgressBar x:Name="RestoreProgressBar" Value="0" Maximum="100" Height="4"
+                    MinWidth="120" IsIndeterminate="False" Opacity="0" VerticalAlignment="Center" />
                 <Button x:Name="StartRestoreButton"
                     Click="StartRestoreButton_Click"
                     Style="{StaticResource AccentButtonStyle}"
@@ -60,14 +55,18 @@
         </Grid>
 
         <!-- Info Bars -->
-        <StackPanel x:Name="InfoBarPanel" Grid.Row="2" Spacing="4" Margin="0" HorizontalAlignment="Stretch">
+        <Grid x:Name="InfoBarPanel" Grid.Row="2" Margin="0" HorizontalAlignment="Stretch">
             <InfoBar x:Name="WarningInfoBar" IsOpen="False" IsClosable="True" Severity="Warning"
-                Title="" Message="" Closed="InfoBar_Closed" HorizontalAlignment="Stretch" />
+                Title="" Message="" HorizontalAlignment="Stretch" Margin="0,20,0,20" />
             <InfoBar x:Name="ErrorInfoBar" IsOpen="False" IsClosable="True" Severity="Error"
-                Title="" Message="" Closed="InfoBar_Closed" HorizontalAlignment="Stretch" />
+                Title="" Message="" HorizontalAlignment="Stretch" Margin="0,20,0,20" />
             <InfoBar x:Name="SuccessInfoBar" IsOpen="False" IsClosable="True" Severity="Success"
-                Title="Restore Complete" Message="" Closed="InfoBar_Closed" HorizontalAlignment="Stretch" />
-        </StackPanel>
+                Title="Restore Complete" Message="" HorizontalAlignment="Stretch" Margin="0,20,0,20">
+                <InfoBar.ActionButton>
+                    <Button x:Name="LaunchBlenderButton" Content="Launch Blender" Click="LaunchBlenderButton_Click" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+        </Grid>
 
         <!-- Main Content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
@@ -111,33 +110,11 @@
                                 Padding="60,16" CornerRadius="0">
                                 <ItemsRepeater x:Name="RestoreItemsRepeater"
                                     ItemsSource="{Binding Source={StaticResource GroupedRestoreItems}}"
-                                    HorizontalAlignment="Stretch">
+                                    HorizontalAlignment="Stretch"
+                                    ItemTemplate="{StaticResource GroupedConfigItemsTemplate}">
                                     <ItemsRepeater.Layout>
                                         <StackLayout Orientation="Horizontal" Spacing="88" />
                                     </ItemsRepeater.Layout>
-                                    <ItemsRepeater.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel HorizontalAlignment="Stretch">
-                                                <TextBlock Text="{Binding Key}"
-                                                     Style="{StaticResource BodyStrongTextBlockStyle}"
-                                                     Margin="0,0,0,12"
-                                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-
-                                                <ItemsRepeater ItemsSource="{Binding Items}">
-                                                    <ItemsRepeater.ItemTemplate>
-                                                        <DataTemplate
-                                                            x:DataType="models:ConfigItemViewModel">
-                                                            <CheckBox Content="{x:Bind Name}"
-                                                                IsChecked="{x:Bind IsEnabled, Mode=TwoWay}"
-                                                                IsEnabled="{x:Bind IsExists}"
-                                                                Margin="0,2,0,2"
-                                                                ToolTipService.ToolTip="{x:Bind TooltipText}" />
-                                                        </DataTemplate>
-                                                    </ItemsRepeater.ItemTemplate>
-                                                </ItemsRepeater>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsRepeater.ItemTemplate>
                                 </ItemsRepeater>
                             </controls:SettingsCard>
                         </controls:SettingsExpander.Items>

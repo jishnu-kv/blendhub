@@ -31,6 +31,43 @@ namespace BlendHub.Pages
             RefreshBackups(backupDir);
 
             ValidateRestoreState();
+
+            if (App.MainWindow != null)
+            {
+                App.MainWindow.Activated += MainWindow_Activated;
+            }
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            if (App.MainWindow != null)
+            {
+                App.MainWindow.Activated -= MainWindow_Activated;
+            }
+        }
+
+        private void MainWindow_Activated(object sender, WindowActivatedEventArgs e)
+        {
+            if (e.WindowActivationState != WindowActivationState.Deactivated)
+            {
+                var backupDir = AppSettingsService.Instance.Settings.BackupDirectory;
+                
+                // Save current selection
+                var currentSelection = BackupNameComboBox.SelectedItem as string;
+                RefreshBackups(backupDir);
+                
+                // Try to restore selection
+                if (!string.IsNullOrEmpty(currentSelection) && BackupNameComboBox.ItemsSource is System.Collections.Generic.IEnumerable<string> backups && backups.Contains(currentSelection))
+                {
+                    BackupNameComboBox.SelectedItem = currentSelection;
+                }
+                
+                if (BackupNameComboBox.SelectedItem is string backupName)
+                {
+                    RefreshItems(backupName);
+                }
+            }
         }
 
         private void LoadTargetVersions()
@@ -40,8 +77,6 @@ namespace BlendHub.Pages
             if (versions.Count > 0)
                 TargetVersionComboBox.SelectedIndex = 0;
         }
-
-
 
         private void RefreshBackups(string backupPath)
         {
@@ -71,8 +106,6 @@ namespace BlendHub.Pages
             }
             ValidateRestoreState();
         }
-
-
 
         private void TargetVersionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -122,7 +155,6 @@ namespace BlendHub.Pages
                     WarningInfoBar.IsClosable = true;
                     WarningInfoBar.IsOpen = true;
                     if (SuccessInfoBar != null) SuccessInfoBar.IsOpen = false;
-                    UpdateInfoBarSpacing();
                 }
                 else
                 {
@@ -133,7 +165,6 @@ namespace BlendHub.Pages
                     WarningInfoBar.IsClosable = false;
                     WarningInfoBar.IsOpen = true;
                     if (SuccessInfoBar != null) SuccessInfoBar.IsOpen = false;
-                    UpdateInfoBarSpacing();
                 }
             }
             else
@@ -157,48 +188,11 @@ namespace BlendHub.Pages
             }
 
             var backupRoot = Path.Combine(AppSettingsService.Instance.Settings.BackupDirectory, backupName);
-            var items = _blenderService.GetDefaultBackupItems(backupRoot);
-            foreach (var item in items)
-            {
-                var vm = new ConfigItemViewModel
-                {
-                    Name = item.Name,
-                    IsEnabled = item.IsEnabled,
-                    IsExists = item.Exists,
-                    TooltipText = item.Category,
-                    Category = item.Category,
-                    RelativePath = item.RelativePath,
-                    IsFolder = item.IsFolder
-                };
-                vm.PropertyChanged += (s, e) => ValidateRestoreState();
-                _restoreItems.Add(vm);
-            }
-
-            // Group by category and update view
-            var groups = _restoreItems
-                .GroupBy(i => i.Category)
-                .OrderBy(g => GetCategoryOrder(g.Key))
-                .Select(g => new CategoryGroup
-                {
-                    Key = g.Key,
-                    Items = g.ToList()
-                })
-                .ToList();
-
-            GroupedRestoreItems.Source = groups;
+            BlenderPageHelper.RefreshConfigItems(_restoreItems, backupRoot, _blenderService, 
+                (vm) => ValidateRestoreState(), GroupedRestoreItems);
             ValidateRestoreState();
         }
 
-        private int GetCategoryOrder(string category)
-        {
-            return category switch
-            {
-                "Extensions & Tools" => 1,
-                "Preferences & Configuration" => 2,
-                "History & Recent Data" => 3,
-                _ => 99
-            };
-        }
 
         private async void StartRestoreButton_Click(object sender, RoutedEventArgs e)
         {
@@ -211,7 +205,6 @@ namespace BlendHub.Pages
                 WarningInfoBar.Title = "No Backup Location";
                 WarningInfoBar.Message = "Please select a backup location first.";
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
                 return;
             }
 
@@ -220,7 +213,6 @@ namespace BlendHub.Pages
                 WarningInfoBar.Title = "No Target Version";
                 WarningInfoBar.Message = "Please select a target Blender version to restore settings to.";
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
                 return;
             }
 
@@ -229,7 +221,6 @@ namespace BlendHub.Pages
                 WarningInfoBar.Title = "No Backup Selected";
                 WarningInfoBar.Message = "Please select a backup to restore from.";
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
                 return;
             }
 
@@ -237,19 +228,10 @@ namespace BlendHub.Pages
             var enabledItems = _restoreItems.Where(i => i.IsEnabled).ToList();
             bool hasCriticalItems = enabledItems.Any(i => i.Name == "Preferences" || i.Name == "Startup File");
 
-            if (hasCriticalItems && !string.IsNullOrEmpty(_backupVersion) && IsVersionNewer(_backupVersion, targetInfo.Version))
+            if (hasCriticalItems && !string.IsNullOrEmpty(_backupVersion) && BlenderPageHelper.IsVersionNewer(_backupVersion, targetInfo.Version))
             {
-                var dialog = new ContentDialog
-                {
-                    Title = "Version Mismatch Warning",
-                    Content = $"You are restoring settings from a newer version ({_backupVersion}) to an older version ({targetInfo.Version}).\n\nRestoring Preferences or Startup Files from a newer version can cause UI glitches or crashes in older Blender versions.\n\nDo you want to continue?",
-                    PrimaryButtonText = "Restore Anyway",
-                    SecondaryButtonText = "Cancel",
-                    DefaultButton = ContentDialogButton.Secondary,
-                    XamlRoot = this.XamlRoot
-                };
-
-                if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+                var result = await BlenderPageHelper.ShowVersionMismatchDialog(this, _backupVersion, targetInfo.Version, "restoring");
+                if (result != ContentDialogResult.Primary)
                     return;
             }
 
@@ -258,7 +240,6 @@ namespace BlendHub.Pages
                 WarningInfoBar.Title = "No Items Selected";
                 WarningInfoBar.Message = "Please enable at least one item to include in the restore.";
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
                 return;
             }
 
@@ -281,24 +262,19 @@ namespace BlendHub.Pages
                 {
                     DispatcherQueue.TryEnqueue(() =>
                     {
-                        StatusText.Text = msg;
                         RestoreProgressBar.IsIndeterminate = false;
                         RestoreProgressBar.Value = progress * 100;
                     });
                 });
 
-                StatusText.Text = "Restore completed successfully!";
                 SuccessInfoBar.Message = $"Settings have been restored to {targetInfo.DisplayName}.";
                 SuccessInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
             }
             catch (Exception ex)
             {
-                StatusText.Text = $"Error: {ex.Message}";
                 ErrorInfoBar.Title = "Restore Failed";
                 ErrorInfoBar.Message = ex.Message;
                 ErrorInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
             }
             finally
             {
@@ -307,16 +283,6 @@ namespace BlendHub.Pages
             }
         }
 
-        private bool IsVersionNewer(string version1, string version2)
-        {
-            // Simple comparison for Blender versions (e.g. 4.1 vs 3.6)
-            if (double.TryParse(version1, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var v1) &&
-                double.TryParse(version2, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var v2))
-            {
-                return v1 > v2;
-            }
-            return string.Compare(version1, version2, StringComparison.OrdinalIgnoreCase) > 0;
-        }
 
         private void EnableAllExpanders(bool enable)
         {
@@ -328,12 +294,13 @@ namespace BlendHub.Pages
             if (RestoreDestinationCard != null) RestoreDestinationCard.IsEnabled = enable;
             if (BackupSelectionCard != null) BackupSelectionCard.IsEnabled = enable;
         }
-        private void InfoBar_Closed(InfoBar sender, InfoBarClosedEventArgs args) => UpdateInfoBarSpacing();
 
-        private void UpdateInfoBarSpacing()
+        private void LaunchBlenderButton_Click(object sender, RoutedEventArgs e)
         {
-            bool anyOpen = WarningInfoBar.IsOpen || ErrorInfoBar.IsOpen || SuccessInfoBar.IsOpen;
-            InfoBarPanel.Margin = anyOpen ? new Thickness(0, 16, 0, 16) : new Thickness(0);
+            if (TargetVersionComboBox.SelectedItem is BlenderVersionInfo targetInfo)
+            {
+                BlenderPageHelper.LaunchBlender(targetInfo, _blenderService);
+            }
         }
     }
 }

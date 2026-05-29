@@ -59,8 +59,8 @@ namespace src.Models
             {
                 if (_saveFolder == null)
                 {
-                    string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                    _saveFolder = Path.Combine(localAppData, "BlendHub", "Boards");
+                    string roamingData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                    _saveFolder = Path.Combine(roamingData, "BlendHub", "Boards");
 
                     if (!Directory.Exists(_saveFolder))
                     {
@@ -181,6 +181,80 @@ namespace src.Models
                     Directory.Delete(assetsFolder, true);
                 }
                 catch { }
+            }
+        }
+
+        public static async Task CleanUpTempImagesAsync()
+        {
+            try
+            {
+                var settingsService = BlendHub.Services.AppSettingsService.Instance;
+                string today = DateTime.Today.ToString("yyyy-MM-dd");
+                if (settingsService.Settings.LastBoardCleanupDate == today)
+                {
+                    return; // Already cleaned up today
+                }
+
+                // Scan all saved boards and collect all used image paths
+                var usedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                if (Directory.Exists(SaveFolder))
+                {
+                    foreach (var file in Directory.GetFiles(SaveFolder, "*.json"))
+                    {
+                        try
+                        {
+                            string json = await File.ReadAllTextAsync(file);
+                            var board = JsonSerializer.Deserialize<BoardData>(json);
+                            if (board?.Items != null)
+                            {
+                                foreach (var item in board.Items)
+                                {
+                                    if (!string.IsNullOrEmpty(item.Content))
+                                    {
+                                        usedPaths.Add(item.Content);
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                // Check the Temp folder
+                string tempFolder = Path.Combine(SaveFolder, "Temp");
+                if (Directory.Exists(tempFolder))
+                {
+                    foreach (var file in Directory.GetFiles(tempFolder))
+                    {
+                        // If the file is not used in any saved board, delete it!
+                        if (!usedPaths.Contains(file))
+                        {
+                            try
+                            {
+                                File.Delete(file);
+                            }
+                            catch { }
+                        }
+                    }
+
+                    // If Temp folder is empty, delete it
+                    if (Directory.GetFiles(tempFolder).Length == 0 && Directory.GetDirectories(tempFolder).Length == 0)
+                    {
+                        try
+                        {
+                            Directory.Delete(tempFolder, true);
+                        }
+                        catch { }
+                    }
+                }
+
+                // Update settings
+                settingsService.Settings.LastBoardCleanupDate = today;
+                settingsService.Save();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[BoardPersistence] Temp cleanup failed: {ex.Message}");
             }
         }
     }

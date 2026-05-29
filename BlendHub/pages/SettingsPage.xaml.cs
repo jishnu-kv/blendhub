@@ -34,6 +34,7 @@ namespace BlendHub.Pages
             BackupLocationTextBox.Text = settings.BackupDirectory;
             AutoDetectVersionToggle.IsOn = settings.AutoDetectBlenderVersion;
             ExpandFoldersToggle.IsOn = settings.ExpandFoldersByDefault;
+            FilterNestedBlendFilesToggle.IsOn = settings.FilterNestedBlendFiles;
 
             // Set Default Page selection
             foreach (ComboBoxItem item in DefaultPageComboBox.Items)
@@ -96,6 +97,12 @@ namespace BlendHub.Pages
         private void ExpandFoldersToggle_Toggled(object sender, RoutedEventArgs e)
         {
             AppSettingsService.Instance.Settings.ExpandFoldersByDefault = ExpandFoldersToggle.IsOn;
+            AppSettingsService.Instance.Save();
+        }
+
+        private void FilterNestedBlendFilesToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            AppSettingsService.Instance.Settings.FilterNestedBlendFiles = FilterNestedBlendFilesToggle.IsOn;
             AppSettingsService.Instance.Save();
         }
 

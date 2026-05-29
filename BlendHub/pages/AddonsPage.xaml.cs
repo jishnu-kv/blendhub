@@ -11,7 +11,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 
@@ -28,6 +27,7 @@ namespace BlendHub.Pages
 
         private List<AddonItem> _onlineAddons = new();
         private static readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.All });
+        private bool _isLoading = true;
 
         public AddonsPage()
         {
@@ -42,9 +42,12 @@ namespace BlendHub.Pages
         {
             base.OnNavigatedTo(e);
             
+            _isLoading = true;
+
             // Hide details pane initially
             DetailsGrid.Visibility = Visibility.Collapsed;
             NoSelectionPanel.Visibility = Visibility.Visible;
+            if (EmptyStatePanel != null) EmptyStatePanel.Visibility = Visibility.Collapsed;
 
             // Reset segmented control back to All
             if (TabSegmented != null)
@@ -58,91 +61,114 @@ namespace BlendHub.Pages
 
             await RefreshDataAsync();
 
+            _isLoading = false;
+            ApplyFilters();
+
             // Background load online extensions so tabs are populated!
             await LoadOnlineExtensionsAsync();
         }
 
         private async Task RefreshDataAsync()
         {
-            // Reset InfoBars
-            SuccessInfoBar.IsOpen = false;
-            WarningInfoBar.IsOpen = false;
-            ErrorInfoBar.IsOpen = false;
-
-            // Load Blender Versions
-            _installedVersions = _blenderService.GetInstalledVersions();
-
-            // Populate Version Filter SubItem options
-            if (VersionFilterSubItem != null)
+            try
             {
-                VersionFilterSubItem.Items.Clear();
-                var allVerItem = new RadioMenuFlyoutItem { Text = "All Versions", GroupName = "VersionGroup", IsChecked = true };
-                allVerItem.Click += FilterCriteriaChanged;
-                VersionFilterSubItem.Items.Add(allVerItem);
+                // Reset InfoBars
+                SuccessInfoBar.IsOpen = false;
+                WarningInfoBar.IsOpen = false;
+                ErrorInfoBar.IsOpen = false;
 
+                // Load Blender Versions
+                _installedVersions = _blenderService.GetInstalledVersions();
+
+                // Populate Version Filter SubItem options
+                if (VersionFilterSubItem != null)
+                {
+                    VersionFilterSubItem.Items.Clear();
+                    var allVerItem = new RadioMenuFlyoutItem { Text = "All Versions", GroupName = "VersionGroup", IsChecked = true };
+                    allVerItem.Click += FilterCriteriaChanged;
+                    VersionFilterSubItem.Items.Add(allVerItem);
+
+                    foreach (var ver in _installedVersions)
+                    {
+                        var verItem = new RadioMenuFlyoutItem { Text = ver.DisplayName, Tag = ver.Version, GroupName = "VersionGroup" };
+                        verItem.Click += FilterCriteriaChanged;
+                        VersionFilterSubItem.Items.Add(verItem);
+                    }
+                }
+
+                // Scan all Addons
+                _allAddons.Clear();
                 foreach (var ver in _installedVersions)
                 {
-                    var verItem = new RadioMenuFlyoutItem { Text = ver.DisplayName, Tag = ver.Version, GroupName = "VersionGroup" };
-                    verItem.Click += FilterCriteriaChanged;
-                    VersionFilterSubItem.Items.Add(verItem);
-                }
-            }
-
-            // Scan all Addons
-            _allAddons.Clear();
-            foreach (var ver in _installedVersions)
-            {
-                if (!string.IsNullOrEmpty(ver.ConfigPath) && Directory.Exists(ver.ConfigPath))
-                {
-                    try
+                    if (!string.IsNullOrEmpty(ver.ConfigPath) && Directory.Exists(ver.ConfigPath))
                     {
-                        var scanned = await _addonService.ScanAddonsAsync(ver.ConfigPath, ver.Version);
-                        _allAddons.AddRange(scanned);
-                    }
-                    catch (Exception ex)
-                    {
-                        ShowError($"Scanning failed for {ver.DisplayName}", ex.Message);
+                        try
+                        {
+                            var scanned = await _addonService.ScanAddonsAsync(ver.ConfigPath, ver.Version);
+                            _allAddons.AddRange(scanned);
+                        }
+                        catch (Exception ex)
+                        {
+                            ShowError($"Scanning failed for {ver.DisplayName}", ex.Message);
+                        }
                     }
                 }
-            }
 
-            // Populate Repository Filter SubItem options
-            if (RepositoryFilterSubItem != null)
-            {
-                RepositoryFilterSubItem.Items.Clear();
-                var allRepoItem = new RadioMenuFlyoutItem { Text = "All Repositories", GroupName = "RepoGroup", IsChecked = true };
-                allRepoItem.Click += FilterCriteriaChanged;
-                RepositoryFilterSubItem.Items.Add(allRepoItem);
+                // Group identical addons (same name, version, and type)
+                _allAddons = _allAddons
+                    .GroupBy(a => new { a.Name, a.Version, a.Type })
+                    .Select(g =>
+                    {
+                        var main = g.First();
+                        main.BlenderVersions = g.SelectMany(x => x.BlenderVersions).Distinct().ToList();
+                        main.InstallationPaths = g.SelectMany(x => x.InstallationPaths).Distinct().ToList();
+                        main.BlenderVersion = string.Join(", ", main.BlenderVersions);
+                        return main;
+                    })
+                    .ToList();
 
-                var distinctRepos = _allAddons
-                    .Where(a => a.Type == "Extension" && !string.IsNullOrEmpty(a.Repository))
-                    .Select(a => a.Repository)
-                    .Distinct()
-                    .OrderBy(r => r);
-
-                foreach (var repo in distinctRepos)
+                // Populate Repository Filter SubItem options
+                if (RepositoryFilterSubItem != null)
                 {
-                    var repoItem = new RadioMenuFlyoutItem { Text = repo, Tag = repo, GroupName = "RepoGroup" };
-                    repoItem.Click += FilterCriteriaChanged;
-                    RepositoryFilterSubItem.Items.Add(repoItem);
-                }
-            }
+                    RepositoryFilterSubItem.Items.Clear();
+                    var allRepoItem = new RadioMenuFlyoutItem { Text = "All Repositories", GroupName = "RepoGroup", IsChecked = true };
+                    allRepoItem.Click += FilterCriteriaChanged;
+                    RepositoryFilterSubItem.Items.Add(allRepoItem);
 
-            // Populate Category Filter SubItem options
-            if (CategoryFilterSubItem != null)
-            {
-                CategoryFilterSubItem.Items.Clear();
-                string[] categories = { "All Categories", "Mesh", "Camera", "Game Engine", "Import-Export", "Object", "Pipeline", "3D View", "Animation", "Compositing", "Geometry Nodes", "Lighting", "Modeling", "Paint", "Render", "Add Curve", "Bake", "Development", "Grease Pencil", "Material", "Node", "Physics", "Rigging" };
-                
-                foreach (var cat in categories)
+                    var distinctRepos = _allAddons
+                        .Where(a => a.Type == "Extension" && !string.IsNullOrEmpty(a.Repository))
+                        .Select(a => a.Repository)
+                        .Distinct()
+                        .OrderBy(r => r);
+
+                    foreach (var repo in distinctRepos)
+                    {
+                        var repoItem = new RadioMenuFlyoutItem { Text = repo, Tag = repo, GroupName = "RepoGroup" };
+                        repoItem.Click += FilterCriteriaChanged;
+                        RepositoryFilterSubItem.Items.Add(repoItem);
+                    }
+                }
+
+                // Populate Category Filter SubItem options
+                if (CategoryFilterSubItem != null)
                 {
-                    var item = new RadioMenuFlyoutItem { Text = cat, GroupName = "CategoryGroup", Tag = cat == "All Categories" ? "" : cat, IsChecked = cat == "All Categories" };
-                    item.Click += FilterCriteriaChanged;
-                    CategoryFilterSubItem.Items.Add(item);
+                    CategoryFilterSubItem.Items.Clear();
+                    string[] categories = { "All Categories", "Mesh", "Camera", "Game Engine", "Import-Export", "Object", "Pipeline", "3D View", "Animation", "Compositing", "Geometry Nodes", "Lighting", "Modeling", "Paint", "Render", "Add Curve", "Bake", "Development", "Grease Pencil", "Material", "Node", "Physics", "Rigging" };
+                    
+                    foreach (var cat in categories)
+                    {
+                        var item = new RadioMenuFlyoutItem { Text = cat, GroupName = "CategoryGroup", Tag = cat == "All Categories" ? "" : cat, IsChecked = cat == "All Categories" };
+                        item.Click += FilterCriteriaChanged;
+                        CategoryFilterSubItem.Items.Add(item);
+                    }
                 }
-            }
 
-            ApplyFilters();
+                ApplyFilters();
+            }
+            catch (Exception ex)
+            {
+                ShowError("Data Refresh Failed", ex.Message);
+            }
         }
 
         private void SortCriteriaChanged(object sender, RoutedEventArgs e)
@@ -174,6 +200,26 @@ namespace BlendHub.Pages
             if (tag == "Market")
             {
                 query = _onlineAddons;
+            }
+            else if (tag == "Updates")
+            {
+                query = _allAddons.Where(localItem =>
+                {
+                    if (localItem.Type != "Extension") return false;
+
+                    var onlineItem = _onlineAddons.FirstOrDefault(a => 
+                        a.Name.Equals(localItem.Name, StringComparison.OrdinalIgnoreCase) || 
+                        (!string.IsNullOrEmpty(a.FolderName) && a.FolderName.Equals(localItem.FolderName, StringComparison.OrdinalIgnoreCase)));
+
+                    if (onlineItem != null)
+                    {
+                        if (System.Version.TryParse(localItem.Version, out var localVer) && System.Version.TryParse(onlineItem.Version, out var onlineVer))
+                        {
+                            return onlineVer > localVer;
+                        }
+                    }
+                    return false;
+                });
             }
             else
             {
@@ -221,10 +267,15 @@ namespace BlendHub.Pages
                     {
                         RepositoryFilterSubItem.Visibility = typeTag == "Legacy Addon" ? Visibility.Collapsed : Visibility.Visible;
                     }
+                    if (CategoryFilterSubItem != null)
+                    {
+                        CategoryFilterSubItem.Visibility = typeTag == "Legacy Addon" ? Visibility.Collapsed : Visibility.Visible;
+                    }
                 }
-                else if (RepositoryFilterSubItem != null)
+                else
                 {
-                    RepositoryFilterSubItem.Visibility = Visibility.Visible;
+                    if (RepositoryFilterSubItem != null) RepositoryFilterSubItem.Visibility = Visibility.Visible;
+                    if (CategoryFilterSubItem != null) CategoryFilterSubItem.Visibility = Visibility.Visible;
                 }
             }
 
@@ -272,7 +323,12 @@ namespace BlendHub.Pages
             UpdateFilteredCollection(results);
 
             // Toggle empty state
-            if (_filteredAddons.Count == 0)
+            if (_isLoading)
+            {
+                EmptyStatePanel.Visibility = Visibility.Collapsed;
+                AddonsListView.Visibility = Visibility.Collapsed;
+            }
+            else if (_filteredAddons.Count == 0)
             {
                 EmptyStatePanel.Visibility = Visibility.Visible;
                 AddonsListView.Visibility = Visibility.Collapsed;
@@ -471,19 +527,80 @@ namespace BlendHub.Pages
                 else
                 {
                     if (PropPathPanel != null) PropPathPanel.Visibility = Visibility.Visible;
-                    PropPath.Text = item.Path;
+                    if (PropPathsContainer != null)
+                    {
+                        PropPathsContainer.Children.Clear();
+
+                        for (int i = 0; i < item.BlenderVersions.Count; i++)
+                        {
+                            var ver = item.BlenderVersions[i];
+                            var p = item.InstallationPaths.Count > i ? item.InstallationPaths[i] : item.Path;
+
+                            var pathBorder = new Border
+                            {
+                                Background = Application.Current.Resources["ControlFillColorDefaultBrush"] as Microsoft.UI.Xaml.Media.Brush,
+                                BorderThickness = new Thickness(1),
+                                BorderBrush = Application.Current.Resources["ControlStrokeColorDefaultBrush"] as Microsoft.UI.Xaml.Media.Brush,
+                                CornerRadius = new CornerRadius(4),
+                                Padding = new Thickness(12),
+                                HorizontalAlignment = HorizontalAlignment.Stretch
+                            };
+
+                            var textStack = new StackPanel { Spacing = 4 };
+
+                            var versionLabel = new TextBlock
+                            {
+                                Text = $"Blender {ver}",
+                                Style = Application.Current.Resources["CaptionTextBlockStyle"] as Style,
+                                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                                Foreground = Application.Current.Resources["TextFillColorPrimaryBrush"] as Microsoft.UI.Xaml.Media.Brush
+                            };
+                            textStack.Children.Add(versionLabel);
+
+                            var pathText = new TextBlock
+                            {
+                                Text = p,
+                                TextWrapping = TextWrapping.Wrap,
+                                FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
+                                Style = Application.Current.Resources["CaptionTextBlockStyle"] as Style,
+                                IsTextSelectionEnabled = true,
+                                Foreground = Application.Current.Resources["TextFillColorSecondaryBrush"] as Microsoft.UI.Xaml.Media.Brush
+                            };
+                            textStack.Children.Add(pathText);
+
+                            pathBorder.Child = textStack;
+                            PropPathsContainer.Children.Add(pathBorder);
+                        }
+                    }
                 }
 
-                // Website Docs button visibility
+                // Website Docs button enabled state
                 bool hasWebsite = !string.IsNullOrEmpty(item.WebsiteUrl);
                 
-                SharedWebsiteButton.Visibility = hasWebsite ? Visibility.Visible : Visibility.Collapsed;
-                OpenFolderButton.SetValue(Grid.ColumnSpanProperty, hasWebsite ? 1 : 2);
+                SharedWebsiteButton.Visibility = Visibility.Visible;
+                SharedWebsiteButton.IsEnabled = hasWebsite;
                 
                 if (WebsiteButton != null) 
                 {
-                    WebsiteButton.Visibility = hasWebsite ? Visibility.Visible : Visibility.Collapsed;
-                    DownloadInstallButton.SetValue(Grid.ColumnSpanProperty, hasWebsite ? 1 : 2);
+                    WebsiteButton.Visibility = Visibility.Visible;
+                    WebsiteButton.IsEnabled = hasWebsite;
+                }
+
+                // Check if update is available and show update button!
+                bool updateAvailable = false;
+                if (!isOnline && item.Type == "Extension" && _onlineAddons.Count > 0)
+                {
+                    var onlineItem = _onlineAddons.FirstOrDefault(a => 
+                        a.Name.Equals(item.Name, StringComparison.OrdinalIgnoreCase) || 
+                        (!string.IsNullOrEmpty(a.FolderName) && a.FolderName.Equals(item.FolderName, StringComparison.OrdinalIgnoreCase)));
+                    if (onlineItem != null && System.Version.TryParse(item.Version, out var localVer) && System.Version.TryParse(onlineItem.Version, out var onlineVer))
+                    {
+                        updateAvailable = onlineVer > localVer;
+                    }
+                }
+                if (UpdateAddonButton != null)
+                {
+                    UpdateAddonButton.Visibility = updateAvailable ? Visibility.Visible : Visibility.Collapsed;
                 }
             }
             else
@@ -499,15 +616,16 @@ namespace BlendHub.Pages
         {
             if (AddonsListView.SelectedItem is not AddonItem item) return;
 
+            var folderPath = item.InstallationPaths.FirstOrDefault() ?? item.Path;
             try
             {
-                if (Directory.Exists(item.Path))
+                if (Directory.Exists(folderPath))
                 {
-                    System.Diagnostics.Process.Start("explorer.exe", $"\"{item.Path}\"");
+                    System.Diagnostics.Process.Start("explorer.exe", $"\"{folderPath}\"");
                 }
-                else if (File.Exists(item.Path))
+                else if (File.Exists(folderPath))
                 {
-                    System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{item.Path}\"");
+                    System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{folderPath}\"");
                 }
             }
             catch (Exception ex)
@@ -538,11 +656,52 @@ namespace BlendHub.Pages
         {
             if (AddonsListView.SelectedItem is not AddonItem item) return;
 
+            string selectedVersion = item.BlenderVersion;
+            string selectedPath = item.Path;
+
+            if (item.BlenderVersions.Count > 1)
+            {
+                var versionCombo = new ComboBox
+                {
+                    Header = "Select Blender Version to Uninstall From",
+                    ItemsSource = item.BlenderVersions,
+                    SelectedIndex = 0,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    Margin = new Thickness(0, 0, 0, 16)
+                };
+
+                var dialogPanel = new StackPanel { Spacing = 4, Width = 340 };
+                dialogPanel.Children.Add(versionCombo);
+
+                var choiceDialog = new ContentDialog
+                {
+                    Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                    Title = "Uninstall Options",
+                    Content = dialogPanel,
+                    PrimaryButtonText = "Select",
+                    SecondaryButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = this.XamlRoot
+                };
+
+                if (await choiceDialog.ShowAsync() != ContentDialogResult.Primary)
+                {
+                    return;
+                }
+
+                var idx = versionCombo.SelectedIndex;
+                if (idx >= 0 && idx < item.BlenderVersions.Count)
+                {
+                    selectedVersion = item.BlenderVersions[idx];
+                    selectedPath = item.InstallationPaths[idx];
+                }
+            }
+
             var dialog = new ContentDialog
             {
                 Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
                 Title = "Uninstall Addon?",
-                Content = $"Are you sure you want to completely uninstall \"{item.Name}\" from Blender {item.BlenderVersion}?\n\nThis will permanently delete the addon directory/files:\n{item.Path}",
+                Content = $"Are you sure you want to completely uninstall \"{item.Name}\" from Blender {selectedVersion}?\n\nThis will permanently delete the addon directory/files:\n{selectedPath}",
                 PrimaryButtonText = "Uninstall",
                 SecondaryButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Secondary,
@@ -553,8 +712,19 @@ namespace BlendHub.Pages
             {
                 try
                 {
-                    await _addonService.UninstallAddonAsync(item);
-                    ShowSuccess("Uninstalled", $"Successfully uninstalled \"{item.Name}\".");
+                    var uninstallItem = new AddonItem
+                    {
+                        Name = item.Name,
+                        FolderName = item.FolderName,
+                        Version = item.Version,
+                        Type = item.Type,
+                        Repository = item.Repository,
+                        BlenderVersion = selectedVersion,
+                        Path = selectedPath
+                    };
+
+                    await _addonService.UninstallAddonAsync(uninstallItem);
+                    ShowSuccess("Uninstalled", $"Successfully uninstalled \"{item.Name}\" from Blender {selectedVersion}.");
                     await RefreshDataAsync();
                 }
                 catch (Exception ex)
@@ -584,92 +754,99 @@ namespace BlendHub.Pages
 
         private async void InstallAddonButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_installedVersions == null || _installedVersions.Count == 0)
+            try
             {
-                ShowWarning("No Blender Versions", "No installed Blender versions were detected. Please set up Blender configurations in Settings first.");
-                return;
-            }
-
-            var picker = new FileOpenPicker();
-            picker.SuggestedStartLocation = PickerLocationId.Downloads;
-            picker.FileTypeFilter.Add(".zip");
-            picker.FileTypeFilter.Add(".py");
-
-            var window = App.MainWindow;
-            if (window != null)
-            {
-                IntPtr hwnd = WindowNative.GetWindowHandle(window);
-                InitializeWithWindow.Initialize(picker, hwnd);
-            }
-
-            var file = await picker.PickSingleFileAsync();
-            if (file == null) return;
-
-            // Show Custom Dialog to configure target version and extension repository
-            var versionCombo = new ComboBox
-            {
-                Header = "Target Blender Version",
-                ItemsSource = _installedVersions,
-                DisplayMemberPath = "DisplayName",
-                SelectedIndex = 0,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Margin = new Thickness(0, 0, 0, 16)
-            };
-
-            var repoCombo = new ComboBox
-            {
-                Header = "Extension Repository (Only for modern Extensions)",
-                ItemsSource = new List<string> { "user_default", "blender_org" },
-                SelectedIndex = 0,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Margin = new Thickness(0, 0, 0, 16)
-            };
-
-            var noteText = new TextBlock
-            {
-                Text = "Note: If the selected .zip contains a 'blender_manifest.toml' file, it will be installed as an Extension under the selected repository. Otherwise, it will be installed as a Legacy Addon.",
-                TextWrapping = TextWrapping.Wrap,
-                FontSize = 12,
-                Foreground = Application.Current.Resources["TextFillColorSecondaryBrush"] as Microsoft.UI.Xaml.Media.Brush
-            };
-
-            var dialogPanel = new StackPanel { Spacing = 4, Width = 340 };
-            dialogPanel.Children.Add(versionCombo);
-            dialogPanel.Children.Add(repoCombo);
-            dialogPanel.Children.Add(noteText);
-
-            var dialog = new ContentDialog
-            {
-                Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
-                Title = "Install Options",
-                Content = dialogPanel,
-                PrimaryButtonText = "Install",
-                SecondaryButtonText = "Cancel",
-                DefaultButton = ContentDialogButton.Primary,
-                XamlRoot = this.XamlRoot
-            };
-
-            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-            {
-                var selectedVersion = versionCombo.SelectedItem as BlenderVersionInfo;
-                if (selectedVersion == null || string.IsNullOrEmpty(selectedVersion.ConfigPath))
+                if (_installedVersions == null || _installedVersions.Count == 0)
                 {
-                    ShowError("Install Error", "Selected target Blender version is invalid.");
+                    ShowWarning("No Blender Versions", "No installed Blender versions were detected. Please set up Blender configurations in Settings first.");
                     return;
                 }
 
-                var selectedRepo = repoCombo.SelectedItem as string ?? "user_default";
+                var picker = new FileOpenPicker();
+                picker.SuggestedStartLocation = PickerLocationId.Downloads;
+                picker.FileTypeFilter.Add(".zip");
+                picker.FileTypeFilter.Add(".py");
 
-                try
+                var window = App.MainWindow;
+                if (window != null)
                 {
-                    await _addonService.InstallAddonAsync(file.Path, selectedVersion.ConfigPath, selectedRepo);
-                    ShowSuccess("Installed Successfully", $"\"{file.Name}\" was installed for {selectedVersion.DisplayName}.");
-                    await RefreshDataAsync();
+                    IntPtr hwnd = WindowNative.GetWindowHandle(window);
+                    InitializeWithWindow.Initialize(picker, hwnd);
                 }
-                catch (Exception ex)
+
+                var file = await picker.PickSingleFileAsync();
+                if (file == null) return;
+
+                // Show Custom Dialog to configure target version and extension repository
+                var versionCombo = new ComboBox
                 {
-                    ShowError("Installation Failed", ex.Message);
+                    Header = "Target Blender Version",
+                    ItemsSource = _installedVersions,
+                    DisplayMemberPath = "DisplayName",
+                    SelectedIndex = 0,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    Margin = new Thickness(0, 0, 0, 16)
+                };
+
+                var repoCombo = new ComboBox
+                {
+                    Header = "Extension Repository (Only for modern Extensions)",
+                    ItemsSource = new List<string> { "user_default", "blender_org" },
+                    SelectedIndex = 0,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    Margin = new Thickness(0, 0, 0, 16)
+                };
+
+                var noteText = new TextBlock
+                {
+                    Text = "Note: If the selected .zip contains a 'blender_manifest.toml' file, it will be installed as an Extension under the selected repository. Otherwise, it will be installed as a Legacy Addon.",
+                    TextWrapping = TextWrapping.Wrap,
+                    FontSize = 12,
+                    Foreground = Application.Current.Resources["TextFillColorSecondaryBrush"] as Microsoft.UI.Xaml.Media.Brush
+                };
+
+                var dialogPanel = new StackPanel { Spacing = 4, Width = 340 };
+                dialogPanel.Children.Add(versionCombo);
+                dialogPanel.Children.Add(repoCombo);
+                dialogPanel.Children.Add(noteText);
+
+                var dialog = new ContentDialog
+                {
+                    Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                    Title = "Install Options",
+                    Content = dialogPanel,
+                    PrimaryButtonText = "Install",
+                    SecondaryButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = this.XamlRoot
+                };
+
+                if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+                {
+                    var selectedVersion = versionCombo.SelectedItem as BlenderVersionInfo;
+                    if (selectedVersion == null || string.IsNullOrEmpty(selectedVersion.ConfigPath))
+                    {
+                        ShowError("Install Error", "Selected target Blender version is invalid.");
+                        return;
+                    }
+
+                    var selectedRepo = repoCombo.SelectedItem as string ?? "user_default";
+
+                    try
+                    {
+                        await _addonService.InstallAddonAsync(file.Path, selectedVersion.ConfigPath, selectedRepo);
+                        ShowSuccess("Installed Successfully", $"\"{file.Name}\" was installed for {selectedVersion.DisplayName}.");
+                        await RefreshDataAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        ShowError("Installation Failed", ex.Message);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                ShowError("Install Setup Error", ex.Message);
             }
         }
 
@@ -722,7 +899,7 @@ namespace BlendHub.Pages
                 InstallAddonButton.Visibility = (tag == "Market") ? Visibility.Collapsed : Visibility.Visible;
             }
 
-            if (tag == "Market" && _onlineAddons.Count == 0)
+            if ((tag == "Market" || tag == "Updates") && _onlineAddons.Count == 0)
             {
                 await LoadOnlineExtensionsAsync();
             }
@@ -829,7 +1006,7 @@ namespace BlendHub.Pages
             for (int i = _filteredAddons.Count - 1; i >= 0; i--)
             {
                 var item = _filteredAddons[i];
-                if (!results.Any(x => x.Path == item.Path && x.BlenderVersion == item.BlenderVersion))
+                if (!results.Any(x => x.Name == item.Name && x.Version == item.Version && x.Type == item.Type))
                 {
                     _filteredAddons.RemoveAt(i);
                 }
@@ -843,7 +1020,7 @@ namespace BlendHub.Pages
 
                 for (int j = i; j < _filteredAddons.Count; j++)
                 {
-                    if (_filteredAddons[j].Path == targetItem.Path && _filteredAddons[j].BlenderVersion == targetItem.BlenderVersion)
+                    if (_filteredAddons[j].Name == targetItem.Name && _filteredAddons[j].Version == targetItem.Version && _filteredAddons[j].Type == targetItem.Type)
                     {
                         existingIdx = j;
                         break;
@@ -870,7 +1047,11 @@ namespace BlendHub.Pages
                 Name = ext.Name,
                 FolderName = ext.Id,
                 Version = ext.Version,
-                Author = string.IsNullOrEmpty(ext.Maintainer) ? "Unknown" : ext.Maintainer,
+                Author = string.IsNullOrEmpty(ext.Maintainer) 
+                    ? "Unknown" 
+                    : (ext.Maintainer.IndexOf('<') >= 0 
+                        ? ext.Maintainer.Substring(0, ext.Maintainer.IndexOf('<')).Trim() 
+                        : ext.Maintainer),
                 Description = ext.Tagline,
                 Category = ext.Tags != null && ext.Tags.Count > 0 ? string.Join(", ", ext.Tags) : "General",
                 Type = "Extension",
@@ -905,16 +1086,10 @@ namespace BlendHub.Pages
             return $"{size:0.#} {suffix[order]}";
         }
 
-        private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
+        private async void UpdateAddonButton_Click(object sender, RoutedEventArgs e)
         {
             if (AddonsListView.SelectedItem is not AddonItem localItem) return;
             
-            if (localItem.Type != "Extension")
-            {
-                ShowWarning("Not Supported", "Only modern Extensions can be updated automatically.");
-                return;
-            }
-
             if (_onlineAddons.Count == 0)
             {
                 await LoadOnlineExtensionsAsync();
@@ -925,74 +1100,95 @@ namespace BlendHub.Pages
             
             if (onlineItem != null)
             {
-                if (System.Version.TryParse(localItem.Version, out var localVer) && System.Version.TryParse(onlineItem.Version, out var onlineVer))
+                string targetVersion = localItem.BlenderVersions.FirstOrDefault() ?? localItem.BlenderVersion;
+                
+                if (localItem.BlenderVersions.Count > 1)
                 {
-                    if (onlineVer > localVer)
+                    var versionCombo = new ComboBox
                     {
-                        var dialog = new ContentDialog
-                        {
-                            Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
-                            Title = "Update Available",
-                            Content = $"A newer version (v{onlineItem.Version}) is available for {localItem.Name}. Do you want to update from v{localItem.Version}?",
-                            PrimaryButtonText = "Update",
-                            SecondaryButtonText = "Cancel",
-                            DefaultButton = ContentDialogButton.Primary,
-                            XamlRoot = this.XamlRoot
-                        };
+                        Header = "Select Blender Version to Update",
+                        ItemsSource = localItem.BlenderVersions,
+                        SelectedIndex = 0,
+                        HorizontalAlignment = HorizontalAlignment.Stretch,
+                        Margin = new Thickness(0, 0, 0, 16)
+                    };
 
-                        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+                    var dialogPanel = new StackPanel { Spacing = 4, Width = 340 };
+                    dialogPanel.Children.Add(versionCombo);
+
+                    var choiceDialog = new ContentDialog
+                    {
+                        Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                        Title = "Update Options",
+                        Content = dialogPanel,
+                        PrimaryButtonText = "Select",
+                        SecondaryButtonText = "Cancel",
+                        DefaultButton = ContentDialogButton.Primary,
+                        XamlRoot = this.XamlRoot
+                    };
+
+                    if (await choiceDialog.ShowAsync() != ContentDialogResult.Primary)
+                    {
+                        return;
+                    }
+
+                    var idx = versionCombo.SelectedIndex;
+                    if (idx >= 0 && idx < localItem.BlenderVersions.Count)
+                    {
+                        targetVersion = localItem.BlenderVersions[idx];
+                    }
+                }
+
+                var dialog = new ContentDialog
+                {
+                    Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                    Title = "Update Available",
+                    Content = $"A newer version (v{onlineItem.Version}) is available for {localItem.Name}. Do you want to update from v{localItem.Version} in Blender {targetVersion}?",
+                    PrimaryButtonText = "Update",
+                    SecondaryButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = this.XamlRoot
+                };
+
+                if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+                {
+                    ProgressOverlayText.Text = $"Updating {localItem.Name}...";
+                    ProgressOverlay.Visibility = Visibility.Visible;
+                    try
+                    {
+                        var tempFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "temp_downloads");
+                        if (!Directory.Exists(tempFolder)) Directory.CreateDirectory(tempFolder);
+                        string tempZip = Path.Combine(tempFolder, $"{onlineItem.FolderName}_{Guid.NewGuid():N}.zip");
+                        using (var response = await _httpClient.GetAsync(onlineItem.Path, HttpCompletionOption.ResponseHeadersRead))
                         {
-                            ProgressOverlayText.Text = $"Updating {localItem.Name}...";
-                            ProgressOverlay.Visibility = Visibility.Visible;
-                            try
+                            response.EnsureSuccessStatusCode();
+                            using (var fs = new FileStream(tempZip, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
                             {
-                                var tempFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "temp_downloads");
-                                if (!Directory.Exists(tempFolder)) Directory.CreateDirectory(tempFolder);
-                                string tempZip = Path.Combine(tempFolder, $"{onlineItem.FolderName}_{Guid.NewGuid():N}.zip");
-                                using (var response = await _httpClient.GetAsync(onlineItem.Path, HttpCompletionOption.ResponseHeadersRead))
-                                {
-                                    response.EnsureSuccessStatusCode();
-                                    using (var fs = new FileStream(tempZip, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
-                                    {
-                                        await response.Content.CopyToAsync(fs);
-                                    }
-                                }
-                                
-                                var installedVer = _installedVersions.FirstOrDefault(v => v.Version == localItem.BlenderVersion);
-                                if (installedVer != null && !string.IsNullOrEmpty(installedVer.ConfigPath))
-                                {
-                                    await _addonService.InstallAddonAsync(tempZip, installedVer.ConfigPath, localItem.Repository ?? "user_default");
-                                    ShowSuccess("Updated Successfully", $"\"{localItem.Name}\" was updated to v{onlineItem.Version}.");
-                                    await RefreshDataAsync();
-                                }
-                                else
-                                {
-                                    ShowError("Update Failed", "Could not determine the installation path for this Blender version.");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                ShowError("Update Failed", ex.Message);
-                            }
-                            finally
-                            {
-                                ProgressOverlay.Visibility = Visibility.Collapsed;
+                                await response.Content.CopyToAsync(fs);
                             }
                         }
+                        
+                        var installedVer = _installedVersions.FirstOrDefault(v => v.Version == targetVersion);
+                        if (installedVer != null && !string.IsNullOrEmpty(installedVer.ConfigPath))
+                        {
+                            await _addonService.InstallAddonAsync(tempZip, installedVer.ConfigPath, localItem.Repository ?? "user_default");
+                            ShowSuccess("Updated Successfully", $"\"{localItem.Name}\" was updated to v{onlineItem.Version} for Blender {targetVersion}.");
+                            await RefreshDataAsync();
+                        }
+                        else
+                        {
+                            ShowError("Update Failed", "Could not determine the installation path for this Blender version.");
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        ShowSuccess("Up to date", $"{localItem.Name} is already at the latest version (v{localItem.Version}).");
+                        ShowError("Update Failed", ex.Message);
+                    }
+                    finally
+                    {
+                        ProgressOverlay.Visibility = Visibility.Collapsed;
                     }
                 }
-                else
-                {
-                    ShowWarning("Version Check Failed", "Could not parse version numbers.");
-                }
-            }
-            else
-            {
-                ShowWarning("Not Found", "Could not find this extension on the official repository.");
             }
         }
 
@@ -1107,6 +1303,98 @@ namespace BlendHub.Pages
                         }
                         catch { }
                     }
+                }
+            }
+        }
+
+        private async void SyncButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (AddonsListView.SelectedItem is not AddonItem item) return;
+
+            if (_installedVersions == null || _installedVersions.Count == 0)
+            {
+                ShowWarning("No Blender Versions", "No installed Blender versions were detected.");
+                return;
+            }
+
+            var otherVersions = _installedVersions
+                .Where(v => !item.BlenderVersions.Contains(v.Version))
+                .ToList();
+
+            if (otherVersions.Count == 0)
+            {
+                ShowWarning("Already Synced", "This addon is already installed on all other detected Blender versions, or no other Blender versions were detected.");
+                return;
+            }
+
+            var versionCombo = new ComboBox
+            {
+                Header = "Select Target Blender Version",
+                ItemsSource = otherVersions,
+                DisplayMemberPath = "DisplayName",
+                SelectedIndex = 0,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Margin = new Thickness(0, 0, 0, 16)
+            };
+
+            var noteText = new TextBlock
+            {
+                Text = $"Note: This will copy the addon \"{item.Name}\" to the selected Blender version.",
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 12,
+                Foreground = Application.Current.Resources["TextFillColorSecondaryBrush"] as Microsoft.UI.Xaml.Media.Brush
+            };
+
+            var dialogPanel = new StackPanel { Spacing = 4, Width = 340 };
+            dialogPanel.Children.Add(versionCombo);
+            dialogPanel.Children.Add(noteText);
+
+            var dialog = new ContentDialog
+            {
+                Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                Title = "Sync Addon to Version",
+                Content = dialogPanel,
+                PrimaryButtonText = "Sync",
+                SecondaryButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.XamlRoot
+            };
+
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                var targetVersion = versionCombo.SelectedItem as BlenderVersionInfo;
+                if (targetVersion == null || string.IsNullOrEmpty(targetVersion.ConfigPath))
+                {
+                    ShowError("Sync Error", "Selected target Blender version is invalid.");
+                    return;
+                }
+
+                ProgressOverlayText.Text = $"Syncing {item.Name} to {targetVersion.DisplayName}...";
+                ProgressOverlay.Visibility = Visibility.Visible;
+
+                try
+                {
+                    var syncItem = new AddonItem
+                    {
+                        Name = item.Name,
+                        FolderName = item.FolderName,
+                        Version = item.Version,
+                        Type = item.Type,
+                        Repository = item.Repository,
+                        Path = item.InstallationPaths.FirstOrDefault() ?? item.Path
+                    };
+
+                    await _addonService.SyncAddonAsync(syncItem, targetVersion.ConfigPath);
+                    ShowSuccess("Sync Successful", $"Successfully synced \"{item.Name}\" to {targetVersion.DisplayName}.");
+                    await RefreshDataAsync();
+                }
+                catch (Exception ex)
+                {
+                    ShowError("Sync Failed", ex.Message);
+                }
+                finally
+                {
+                    ProgressOverlay.Visibility = Visibility.Collapsed;
                 }
             }
         }

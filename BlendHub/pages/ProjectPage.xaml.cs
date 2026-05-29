@@ -34,10 +34,17 @@ namespace BlendHub.Pages
         {
             base.OnNavigatedTo(e);
             LoadProjects();
-            if (e.Parameter is string projectName && !string.IsNullOrEmpty(projectName))
+            if (e.Parameter is string parameter && !string.IsNullOrEmpty(parameter))
             {
-                SearchTextBox.Text = projectName;
-                ApplyFilterAndSort();
+                if (parameter == "create")
+                {
+                    ShowDialog_Click(this, new RoutedEventArgs());
+                }
+                else
+                {
+                    SearchTextBox.Text = parameter;
+                    ApplyFilterAndSort();
+                }
             }
         }
 

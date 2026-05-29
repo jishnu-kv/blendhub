@@ -381,7 +381,10 @@ namespace BlendHub.Dialogs
                     Process.Start(new ProcessStartInfo { FileName = _downloadedFilePath, UseShellExecute = true });
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DownloadDialog] Failed to open installer: {ex.Message}");
+            }
         }
 
         private void OpenFolderBtn_Click(object sender, RoutedEventArgs e)
@@ -397,7 +400,10 @@ namespace BlendHub.Dialogs
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DownloadDialog] Failed to open download folder: {ex.Message}");
+            }
         }
 
         private void ToggleCloseButton(bool enabled)
@@ -461,7 +467,10 @@ namespace BlendHub.Dialogs
                         Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[DownloadDialog] Failed to open downloaded installer: {ex.Message}");
+                }
             }
         }
 
@@ -477,7 +486,10 @@ namespace BlendHub.Dialogs
                         Process.Start("explorer.exe", folderPath);
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[DownloadDialog] Failed to open downloads folder: {ex.Message}");
+                }
             }
         }
 

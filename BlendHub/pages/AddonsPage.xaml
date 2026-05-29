@@ -25,9 +25,8 @@
     <Grid Padding="32,32,32,32">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" /> <!-- Row 0: Header and Actions -->
-            <RowDefinition Height="Auto" /> <!-- Row 1: Tab Menu Switcher -->
-            <RowDefinition Height="Auto" /> <!-- Row 2: Info Bars -->
-            <RowDefinition Height="*" />    <!-- Row 3: Main Body Split Grid -->
+            <RowDefinition Height="Auto" /> <!-- Row 1: Info Bars -->
+            <RowDefinition Height="*" />    <!-- Row 2: Main Body Split Grid -->
         </Grid.RowDefinitions>
 
         <!-- Header Section -->
@@ -65,74 +64,8 @@
             </StackPanel>
         </Grid>
 
-        <!-- Tab Switcher & Search Section -->
-        <Grid Grid.Row="1" Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <!-- Left: Search Box & Refresh Button -->
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" HorizontalAlignment="Left">
-                <AutoSuggestBox x:Name="SearchBox" Width="280"
-                                PlaceholderText="Search addons..."
-                                TextChanged="FilterCriteriaChanged"
-                                VerticalAlignment="Center">
-                    <AutoSuggestBox.QueryIcon>
-                        <FontIcon Glyph="&#xE721;" FontSize="14" />
-                    </AutoSuggestBox.QueryIcon>
-                </AutoSuggestBox>
-                
-                <Button x:Name="RefreshButton" Click="RefreshButton_Click" ToolTipService.ToolTip="Refresh" Height="32" Width="32" Padding="0">
-                    <FontIcon Glyph="&#xE72C;" FontSize="14" />
-                </Button>
-            </StackPanel>
-
-            <!-- Right: Tab Switcher Menu & Sort/Filter Buttons -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" HorizontalAlignment="Right">
-                <controls:Segmented x:Name="TabSegmented"
-                                    SelectionChanged="TabSegmented_SelectionChanged" 
-                                    SelectedIndex="0" VerticalAlignment="Center">
-                    <controls:SegmentedItem Tag="Installed" Content="Installed" MinWidth="100" />
-                    <controls:SegmentedItem Tag="Market" Content="Market" MinWidth="90" />
-                </controls:Segmented>
-
-                <Button x:Name="SortButton" ToolTipService.ToolTip="Sort" Height="32" Width="32" Padding="0">
-                    <FontIcon Glyph="&#xE8CB;" FontSize="14" />
-                    <Button.Flyout>
-                        <MenuFlyout Placement="Bottom">
-                            <RadioMenuFlyoutItem x:Name="SortNameAsc" Text="Name (A-Z)" GroupName="SortGroup" IsChecked="True" Click="SortCriteriaChanged"/>
-                            <RadioMenuFlyoutItem x:Name="SortNameDesc" Text="Name (Z-A)" GroupName="SortGroup" Click="SortCriteriaChanged"/>
-                        </MenuFlyout>
-                    </Button.Flyout>
-                </Button>
-
-                <Button x:Name="FilterButton" ToolTipService.ToolTip="Filters" Height="32" Width="32" Padding="0">
-                    <FontIcon Glyph="&#xE71C;" FontSize="14" />
-                    <Button.Flyout>
-                        <MenuFlyout Placement="Bottom">
-                            <MenuFlyoutSubItem x:Name="VersionFilterSubItem" Text="Blender Version">
-                                <!-- Dynamically populated in C# -->
-                            </MenuFlyoutSubItem>
-                            <MenuFlyoutSubItem x:Name="TypeFilterSubItem" Text="Addon Type">
-                                <RadioMenuFlyoutItem x:Name="TypeFilterAll" Text="All Types" GroupName="TypeGroup" IsChecked="True" Click="FilterCriteriaChanged"/>
-                                <RadioMenuFlyoutItem x:Name="TypeFilterExtension" Text="Extensions" GroupName="TypeGroup" Click="FilterCriteriaChanged"/>
-                                <RadioMenuFlyoutItem x:Name="TypeFilterLegacy" Text="Legacy Addons" GroupName="TypeGroup" Click="FilterCriteriaChanged"/>
-                            </MenuFlyoutSubItem>
-                            <MenuFlyoutSubItem x:Name="CategoryFilterSubItem" Text="Category">
-                                <!-- Dynamically populated in C# -->
-                            </MenuFlyoutSubItem>
-                            <MenuFlyoutSubItem x:Name="RepositoryFilterSubItem" Text="Repository">
-                                <!-- Dynamically populated in C# -->
-                            </MenuFlyoutSubItem>
-                        </MenuFlyout>
-                    </Button.Flyout>
-                </Button>
-            </StackPanel>
-        </Grid>
-
         <!-- Info Bars Panel -->
-        <StackPanel x:Name="InfoBarPanel" Grid.Row="2" Spacing="4" Margin="0">
+        <StackPanel x:Name="InfoBarPanel" Grid.Row="1" Spacing="4" Margin="0">
             <InfoBar x:Name="SuccessInfoBar" IsOpen="False" IsClosable="True" Severity="Success"
                      Title="Success" Message="" Closed="InfoBar_Closed" />
             <InfoBar x:Name="WarningInfoBar" IsOpen="False" IsClosable="True" Severity="Warning"
@@ -142,74 +75,150 @@
         </StackPanel>
 
         <!-- Main Body split layout (Grid of Cards and Details) -->
-        <Grid Grid.Row="3" ColumnDefinitions="*,1,420" ColumnSpacing="12">
+        <Grid Grid.Row="2" ColumnDefinitions="*,1,420" ColumnSpacing="12">
 
-            <!-- Left Side: Addons Grid -->
-            <Grid Grid.Column="0">
-                <ItemsView x:Name="AddonsListView" 
-                           SelectionChanged="AddonsListView_SelectionChanged"
-                           Padding="0,0,12,0">
-                    <ItemsView.Layout>
-                        <UniformGridLayout ItemsStretch="Fill" 
-                                           MinItemWidth="250" 
-                                           MinItemHeight="130" 
-                                           MinColumnSpacing="8" 
-                                           MinRowSpacing="8"/>
-                    </ItemsView.Layout>
+            <!-- Left Side: Search & Addons Grid -->
+            <Grid Grid.Column="0" RowDefinitions="Auto,*">
 
-                    <ItemsView.ItemTemplate>
-                        <DataTemplate x:DataType="services:AddonItem">
-                            <ItemContainer>
-                                <!-- Info-Rich Grid Style Card -->
-                                <Grid Height="130" Padding="20"
-                                      Background="{ThemeResource ControlFillColorDefaultBrush}"
-                                      BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush }"
-                                      BorderThickness="1" CornerRadius="4"
-                                      RowDefinitions="Auto,*,Auto">
+                <!-- Tab Switcher & Search Section -->
+                <Grid Grid.Row="0" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                                    <!-- Row 0: Name -->
-                                    <TextBlock Grid.Row="0" Text="{x:Bind Name}" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"
-                                               MaxLines="1" TextTrimming="CharacterEllipsis"
-                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
- 
-                                    <!-- Row 1: Tagline / Description -->
-                                    <TextBlock Grid.Row="1" Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}"
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                               MaxLines="3" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" Margin="0,0,0,4" />
- 
-                                    <!-- Row 2: Footer showing Author & Version Badge -->
-                                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
-                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                            <FontIcon Glyph="&#xE77B;" FontSize="9.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                            <TextBlock Text="{x:Bind Author}" Style="{StaticResource CaptionTextBlockStyle}"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
-                                                       TextTrimming="CharacterEllipsis" MaxWidth="180" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                        <Border Grid.Column="1" CornerRadius="4" Padding="6,2" Margin="8,0,0,0"
-                                                Background="{x:Bind Type, Converter={StaticResource AddonTypeToBrushConverter}}" 
-                                                VerticalAlignment="Center">
-                                            <TextBlock Text="{x:Bind Version}" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
-                                        </Border>
+                    <!-- Left: Search Box & Refresh Button -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" HorizontalAlignment="Left">
+                        <AutoSuggestBox x:Name="SearchBox" Width="280"
+                                        PlaceholderText="Search addons..."
+                                        TextChanged="FilterCriteriaChanged"
+                                        VerticalAlignment="Center">
+                            <AutoSuggestBox.QueryIcon>
+                                <FontIcon Glyph="&#xE721;" FontSize="14" />
+                            </AutoSuggestBox.QueryIcon>
+                        </AutoSuggestBox>
+
+                        <Button x:Name="RefreshButton" Click="RefreshButton_Click" ToolTipService.ToolTip="Refresh" Height="32" Width="32" Padding="0">
+                            <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Right: Tab Switcher Menu & Sort/Filter Buttons -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <controls:Segmented x:Name="TabSegmented"
+                                            SelectionChanged="TabSegmented_SelectionChanged"
+                                            SelectedIndex="0" VerticalAlignment="Center" Height="32">
+                            <controls:SegmentedItem Tag="Installed" MinWidth="50" Height="32" Padding="0" ToolTipService.ToolTip="Installed">
+                                <FontIcon Glyph="&#xE770;" FontSize="16" />
+                            </controls:SegmentedItem>
+                            <controls:SegmentedItem Tag="Updates" MinWidth="50" Height="32" Padding="0" ToolTipService.ToolTip="Updates">
+                                <FontIcon Glyph="&#xE895;" FontSize="16" />
+                            </controls:SegmentedItem>
+                            <controls:SegmentedItem Tag="Market" MinWidth="50" Height="32" Padding="0" ToolTipService.ToolTip="Market">
+                                <FontIcon Glyph="&#xE774;" FontSize="16" />
+                            </controls:SegmentedItem>
+                        </controls:Segmented>
+
+                        <Button x:Name="SortButton" ToolTipService.ToolTip="Sort" Height="32" Width="32" Padding="0">
+                            <FontIcon Glyph="&#xE8CB;" FontSize="14" />
+                            <Button.Flyout>
+                                <MenuFlyout Placement="Bottom">
+                                    <RadioMenuFlyoutItem x:Name="SortNameAsc" Text="Name (A-Z)" GroupName="SortGroup" IsChecked="True" Click="SortCriteriaChanged"/>
+                                    <RadioMenuFlyoutItem x:Name="SortNameDesc" Text="Name (Z-A)" GroupName="SortGroup" Click="SortCriteriaChanged"/>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+
+                        <Button x:Name="FilterButton" ToolTipService.ToolTip="Filters" Height="32" Width="32" Padding="0">
+                            <FontIcon Glyph="&#xE71C;" FontSize="14" />
+                            <Button.Flyout>
+                                <MenuFlyout Placement="Bottom">
+                                    <MenuFlyoutSubItem x:Name="VersionFilterSubItem" Text="Blender Version">
+                                        <!-- Dynamically populated in C# -->
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutSubItem x:Name="TypeFilterSubItem" Text="Addon Type">
+                                        <RadioMenuFlyoutItem x:Name="TypeFilterAll" Text="All Types" GroupName="TypeGroup" IsChecked="True" Click="FilterCriteriaChanged"/>
+                                        <RadioMenuFlyoutItem x:Name="TypeFilterExtension" Text="Extensions" GroupName="TypeGroup" Click="FilterCriteriaChanged"/>
+                                        <RadioMenuFlyoutItem x:Name="TypeFilterLegacy" Text="Legacy Addons" GroupName="TypeGroup" Click="FilterCriteriaChanged"/>
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutSubItem x:Name="CategoryFilterSubItem" Text="Category">
+                                        <!-- Dynamically populated in C# -->
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutSubItem x:Name="RepositoryFilterSubItem" Text="Repository">
+                                        <!-- Dynamically populated in C# -->
+                                    </MenuFlyoutSubItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <Grid Grid.Row="1">
+                    <ItemsView x:Name="AddonsListView"
+                               SelectionChanged="AddonsListView_SelectionChanged"
+                               Padding="0,0,12,0">
+                        <ItemsView.Layout>
+                            <UniformGridLayout ItemsStretch="Fill"
+                                               MinItemWidth="250"
+                                               MinItemHeight="130"
+                                               MinColumnSpacing="8"
+                                               MinRowSpacing="8"/>
+                        </ItemsView.Layout>
+
+                        <ItemsView.ItemTemplate>
+                            <DataTemplate x:DataType="services:AddonItem">
+                                <ItemContainer>
+                                    <!-- Info-Rich Grid Style Card -->
+                                    <Grid Height="130" Padding="20"
+                                          Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                          BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush }"
+                                          BorderThickness="1" CornerRadius="4"
+                                          RowDefinitions="Auto,*,Auto">
+
+                                        <!-- Row 0: Name -->
+                                        <TextBlock Grid.Row="0" Text="{x:Bind Name}" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,4"
+                                                   MaxLines="1" TextTrimming="CharacterEllipsis"
+                                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+
+                                        <!-- Row 1: Tagline / Description -->
+                                        <TextBlock Grid.Row="1" Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   MaxLines="3" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" Margin="0,0,0,4" />
+
+                                        <!-- Row 2: Footer showing Author & Version Badge -->
+                                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                <FontIcon Glyph="&#xE77B;" FontSize="9.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                <TextBlock Text="{x:Bind Author}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           TextTrimming="CharacterEllipsis" MaxWidth="180" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                            <Border Grid.Column="1" CornerRadius="4" Padding="6,2" Margin="8,0,0,0"
+                                                    Background="{x:Bind Type, Converter={StaticResource AddonTypeToBrushConverter}}"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{x:Bind Version}" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
+                                            </Border>
+                                        </Grid>
                                     </Grid>
-                                </Grid>
-                            </ItemContainer>
-                        </DataTemplate>
-                    </ItemsView.ItemTemplate>
-                </ItemsView>
+                                </ItemContainer>
+                            </DataTemplate>
+                        </ItemsView.ItemTemplate>
+                    </ItemsView>
 
-                <!-- Empty State -->
-                <StackPanel x:Name="EmptyStatePanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
-                    <FontIcon Glyph="&#xE7FC;" FontSize="48" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="No Addons or Extensions found." Style="{StaticResource BodyLargeStrongTextBlockStyle}" HorizontalAlignment="Center" />
-                    <TextBlock Text="Try changing your search terms or filters above." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
-                </StackPanel>
+                    <!-- Empty State -->
+                    <StackPanel x:Name="EmptyStatePanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+                        <FontIcon Glyph="&#xE7FC;" FontSize="48" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="No Addons or Extensions found." Style="{StaticResource BodyLargeStrongTextBlockStyle}" HorizontalAlignment="Center" />
+                        <TextBlock Text="Try changing your search terms or filters above." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Grid>
             </Grid>
 
             <!-- Vertical Separator -->
             <Border Grid.Column="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
             <!-- Right Side: Details Panel -->
-            <Grid Grid.Column="2" 
+            <Grid Grid.Column="2"
                   Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                   BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                   BorderThickness="1"
@@ -218,7 +227,7 @@
                 <Grid>
                     <!-- Detail Display -->
                     <Grid x:Name="DetailsGrid" Visibility="Visible" RowDefinitions="Auto,*,Auto">
-                        
+
                         <!-- 1. Header & Quick Info Section -->
                         <Grid Grid.Row="0" Margin="0,0,0,12">
                             <StackPanel Spacing="0">
@@ -231,7 +240,7 @@
                                             <TextBlock x:Name="DetailRepoCardText" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Border>
-                                    
+
                                     <!-- Version Badge -->
                                     <Border CornerRadius="4" Padding="10,4" Background="{ThemeResource AccentAAFillColorDefaultBrush}">
                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -240,19 +249,19 @@
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
-                                
+
                                 <!-- Main Title -->
                                 <TextBlock x:Name="DetailName" Style="{StaticResource TitleTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
-                                
+
                                 <!-- Author -->
                                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,0,0,12">
                                     <FontIcon Glyph="&#xE77B;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                     <TextBlock x:Name="DetailAuthorText" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                 </StackPanel>
- 
+
                                 <!-- Plain Description/Tagline (No Card Border) -->
                                 <TextBlock x:Name="DetailTagline" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" LineHeight="20" />
- 
+
                                 <!-- Badge Row (Only Size Badge is left, placed after description/tagline) -->
                                 <StackPanel x:Name="DetailSizeLabel" Orientation="Horizontal" Spacing="8" Margin="0,9,0,3">
                                     <!-- Size Badge -->
@@ -263,7 +272,7 @@
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
- 
+
                                 <MenuFlyoutSeparator Margin="0,8,0,0"/>
                             </StackPanel>
                         </Grid>
@@ -292,9 +301,9 @@
                                         <FontIcon Glyph="&#xE7EF;" FontSize="16" Grid.Column="0" VerticalAlignment="Top" Margin="0,2,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         <StackPanel Grid.Column="1" Spacing="8" HorizontalAlignment="Stretch">
                                             <TextBlock Text="Required Permissions" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                                            
+
                                             <!-- Dynamic Badges -->
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <controls:WrapPanel Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="8">
                                                 <!-- Safe Shield / No Permissions -->
                                                 <Border x:Name="PermNoPermissionsBadge" CornerRadius="4" Padding="8,3" Background="Green" Visibility="Collapsed">
                                                     <StackPanel Orientation="Horizontal" Spacing="4">
@@ -302,7 +311,7 @@
                                                         <TextBlock Text="No permissions required" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
                                                     </StackPanel>
                                                 </Border>
-                                                
+
                                                 <!-- Network Access -->
                                                 <Border x:Name="PermNetworkBadge" CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemControlBackgroundAccentBrush}" Visibility="Collapsed">
                                                     <StackPanel Orientation="Horizontal" Spacing="4">
@@ -310,7 +319,7 @@
                                                         <TextBlock Text="Network Access" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
                                                     </StackPanel>
                                                 </Border>
-                                                
+
                                                 <!-- Disk Access -->
                                                 <Border x:Name="PermFilesBadge" CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemControlBackgroundAccentBrush}" Visibility="Collapsed">
                                                     <StackPanel Orientation="Horizontal" Spacing="4">
@@ -318,7 +327,7 @@
                                                         <TextBlock Text="Disk/File Access" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
                                                     </StackPanel>
                                                 </Border>
- 
+
                                                 <!-- Clipboard Access -->
                                                 <Border x:Name="PermClipboardBadge" CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemControlBackgroundAccentBrush}" Visibility="Collapsed">
                                                     <StackPanel Orientation="Horizontal" Spacing="4">
@@ -326,9 +335,8 @@
                                                         <TextBlock Text="Clipboard Access" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
                                                     </StackPanel>
                                                 </Border>
-                                            </StackPanel>
-                                            
-                                            <TextBlock x:Name="PropPermissions" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                            </controls:WrapPanel>
+                                            <TextBlock x:Name="PropPermissions" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,0,0,0" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -338,10 +346,9 @@
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                                         <FontIcon Glyph="&#xE8DA;" FontSize="16" Grid.Column="0" VerticalAlignment="Top" Margin="0,2,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         <StackPanel Grid.Column="1" Spacing="8" HorizontalAlignment="Stretch">
-                                            <TextBlock Text="Installation Location" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                                            <Border Background="{ThemeResource ControlFillColorDefaultBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" CornerRadius="4" Padding="10,6" HorizontalAlignment="Stretch">
-                                                <TextBlock x:Name="PropPath" TextWrapping="Wrap" FontFamily="Consolas" Style="{StaticResource CaptionTextBlockStyle}" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                            </Border>
+                                            <TextBlock Text="Installation Locations" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                            <!-- Nested container for path sub-cards -->
+                                            <StackPanel x:Name="PropPathsContainer" Spacing="8" HorizontalAlignment="Stretch" />
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -352,7 +359,7 @@
                         <StackPanel Grid.Row="2" Spacing="8" Margin="0,8,0,0">
                             <!-- Online Actions -->
                             <Grid x:Name="OnlineActionsGrid" ColumnDefinitions="*,*" ColumnSpacing="8" Visibility="Collapsed">
-                                <Button x:Name="DownloadInstallButton" Grid.Column="0" Click="DownloadInstallButton_Click" 
+                                <Button x:Name="DownloadInstallButton" Grid.Column="0" Click="DownloadInstallButton_Click"
                                         Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Stretch"
                                         ToolTipService.ToolTip="Download and install this extension to Blender">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -371,6 +378,14 @@
 
                             <!-- Local Actions -->
                             <StackPanel x:Name="LocalActionsGrid" Spacing="8" Visibility="Visible">
+                                <Button x:Name="UpdateAddonButton" Click="UpdateAddonButton_Click" HorizontalAlignment="Stretch"
+                                        Style="{StaticResource AccentButtonStyle}" Visibility="Collapsed"
+                                        ToolTipService.ToolTip="Update this extension to the latest version">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE895;" FontSize="14" />
+                                        <TextBlock Text="Update Extension" />
+                                    </StackPanel>
+                                </Button>
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                     <Button x:Name="OpenFolderButton" Grid.Column="0" Click="OpenFolderButton_Click" HorizontalAlignment="Stretch"
                                             ToolTipService.ToolTip="Open the addon directory in File Explorer">
@@ -388,11 +403,11 @@
                                     </Button>
                                 </Grid>
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                    <Button x:Name="CheckUpdatesButton" Click="CheckUpdatesButton_Click" Grid.Column="0" HorizontalAlignment="Stretch"
-                                            ToolTipService.ToolTip="Check for newer versions of this addon online">
+                                    <Button x:Name="SyncButton" Grid.Column="0" Click="SyncButton_Click" HorizontalAlignment="Stretch"
+                                            ToolTipService.ToolTip="Sync this addon to another installed Blender version">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <FontIcon Glyph="&#xE72C;" FontSize="14" />
-                                            <TextBlock Text="Check for Updates" />
+                                            <FontIcon Glyph="&#xE895;" FontSize="14" />
+                                            <TextBlock Text="Sync to Version" />
                                         </StackPanel>
                                     </Button>
                                     <Button x:Name="UninstallButton" Grid.Column="1" Click="UninstallButton_Click" HorizontalAlignment="Stretch"
@@ -418,8 +433,9 @@
         </Grid>
 
         <!-- Loading / Progress Overlay -->
-        <Grid x:Name="ProgressOverlay" Grid.Row="0" Grid.RowSpan="4"
-              Background="{ThemeResource SmokeFillColorDefaultBrush}"
+        <Grid x:Name="ProgressOverlay" Grid.Row="0" Grid.RowSpan="3"
+              Background="Transparent"
+              IsHitTestVisible="False"
               Visibility="Collapsed"
               HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">

@@ -13,6 +13,7 @@ namespace BlendHub.Services
         public string ExecutablePath { get; set; } = string.Empty;
         public string DisplayName => $"Blender {Version}";
         public bool IsUpdateAvailable { get; set; }
+        public bool ShowDivider { get; set; } = true;
     }
 
     public class BackupItem
@@ -40,6 +41,8 @@ namespace BlendHub.Services
         {
             var versions = new List<BlenderVersionInfo>();
             var configRoot = GetBlenderRootPath();
+            var discoveredVersions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // version -> executablePath
+
             var searchPaths = new[]
             {
                 @"C:\Program Files\Blender Foundation",
@@ -48,52 +51,172 @@ namespace BlendHub.Services
                 @"C:\Program Files\WindowsApps"
             };
 
+            // Phase 1: Discover versions from installation directories
+            foreach (var root in searchPaths)
+            {
+                if (!Directory.Exists(root)) continue;
+
+                try
+                {
+                    if (root.EndsWith("Blender Foundation", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Standard installation: "C:\Program Files\Blender Foundation\Blender 4.2\blender.exe"
+                        foreach (var dir in Directory.GetDirectories(root))
+                        {
+                            try
+                            {
+                                var dirName = Path.GetFileName(dir);
+                                var versionStr = ExtractVersionFromName(dirName);
+                                if (string.IsNullOrEmpty(versionStr)) continue;
+
+                                var exe = Path.Combine(dir, "blender.exe");
+                                if (!File.Exists(exe)) exe = Path.Combine(dir, "blender-launcher.exe");
+                                if (File.Exists(exe) && !discoveredVersions.ContainsKey(versionStr))
+                                {
+                                    discoveredVersions[versionStr] = exe;
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                    else if (root.Contains("Steam", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Steam installation
+                        var exe = Path.Combine(root, "blender.exe");
+                        if (!File.Exists(exe)) exe = Path.Combine(root, "blender-launcher.exe");
+                        if (File.Exists(exe))
+                        {
+                            try
+                            {
+                                var vi = System.Diagnostics.FileVersionInfo.GetVersionInfo(exe);
+                                var ver = vi.ProductVersion ?? vi.FileVersion;
+                                var versionStr = ExtractMajorMinor(ver);
+                                if (!string.IsNullOrEmpty(versionStr) && !discoveredVersions.ContainsKey(versionStr))
+                                {
+                                    discoveredVersions[versionStr] = exe;
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                    else if (root.Contains("WindowsApps"))
+                    {
+                        // Microsoft Store: use PackageManager API to discover installed Blender packages
+                        // This bypasses the ACL restriction on C:\Program Files\WindowsApps
+                        try
+                        {
+                            var packageManager = new Windows.Management.Deployment.PackageManager();
+                            var packages = packageManager.FindPackagesForUser("");
+                            foreach (var pkg in packages)
+                            {
+                                try
+                                {
+                                    if (!pkg.Id.Name.Contains("Blender", StringComparison.OrdinalIgnoreCase)) continue;
+
+                                    var installPath = pkg.InstalledPath;
+                                    if (string.IsNullOrEmpty(installPath)) continue;
+
+                                    // Extract version from package version (e.g. 5.1.2.0 -> "5.1")
+                                    var pkgVersion = pkg.Id.Version;
+                                    var versionStr = $"{pkgVersion.Major}.{pkgVersion.Minor}";
+
+                                    // Blender exe is inside a "Blender" subdirectory within the package
+                                    var exe = Path.Combine(installPath, "Blender", "blender.exe");
+                                    if (!File.Exists(exe)) exe = Path.Combine(installPath, "Blender", "blender-launcher.exe");
+                                    // Also check root of package dir
+                                    if (!File.Exists(exe)) exe = Path.Combine(installPath, "blender.exe");
+                                    if (!File.Exists(exe)) exe = Path.Combine(installPath, "blender-launcher.exe");
+
+                                    if (File.Exists(exe) && !discoveredVersions.ContainsKey(versionStr))
+                                    {
+                                        discoveredVersions[versionStr] = exe;
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                        catch { /* PackageManager API not available or failed */ }
+                    }
+                }
+                catch { /* Ignore scan errors */ }
+            }
+
+            // Phase 2: Ensure configRoot exists and pre-create config folders for discovered versions
+            if (!Directory.Exists(configRoot))
+            {
+                try { Directory.CreateDirectory(configRoot); } catch { }
+            }
+
+            foreach (var kvp in discoveredVersions)
+            {
+                var configPath = Path.Combine(configRoot, kvp.Key);
+                if (!Directory.Exists(configPath))
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(configPath);
+                        Directory.CreateDirectory(Path.Combine(configPath, "config"));
+                    }
+                    catch { }
+                }
+            }
+
+            // Phase 3: Build versions list from AppData config folders (now enriched by Phase 2)
             if (Directory.Exists(configRoot))
             {
                 foreach (var dir in Directory.GetDirectories(configRoot))
                 {
                     var version = Path.GetFileName(dir);
-                    if (char.IsDigit(version[0]))
-                    {
-                        var info = new BlenderVersionInfo
-                        {
-                            Version = version,
-                            ConfigPath = dir
-                        };
+                    if (version.Length == 0 || !char.IsDigit(version[0])) continue;
 
-                        // Search for executable across common paths
+                    var info = new BlenderVersionInfo
+                    {
+                        Version = version,
+                        ConfigPath = dir
+                    };
+
+                    // Use discovered executable if available
+                    if (discoveredVersions.TryGetValue(version, out var discoveredExe))
+                    {
+                        info.ExecutablePath = discoveredExe;
+                    }
+                    else
+                    {
+                        // Fallback: search for executable across common paths
                         foreach (var root in searchPaths)
                         {
                             if (!Directory.Exists(root)) continue;
 
                             try
                             {
-                                // Check for direct matches in WindowsApps for Store apps
                                 if (root.Contains("WindowsApps"))
                                 {
-                                    // Specifically look for folders containing "Blender" and version
-                                    var storeDir = Directory.GetDirectories(root)
-                                        .FirstOrDefault(d => d.Contains("Blender") && d.Contains(version));
-
-                                    if (storeDir != null)
+                                    // Use PackageManager API to find Store-installed Blender matching this version
+                                    try
                                     {
-                                        var exe = Path.Combine(storeDir, "blender.exe");
-                                        if (!File.Exists(exe)) exe = Path.Combine(storeDir, "blender-launcher.exe");
-
-                                        if (File.Exists(exe))
+                                        var pm = new Windows.Management.Deployment.PackageManager();
+                                        foreach (var pkg in pm.FindPackagesForUser(""))
                                         {
-                                            info.ExecutablePath = exe;
-                                            break;
+                                            try
+                                            {
+                                                if (!pkg.Id.Name.Contains("Blender", StringComparison.OrdinalIgnoreCase)) continue;
+                                                var pkgVer = $"{pkg.Id.Version.Major}.{pkg.Id.Version.Minor}";
+                                                if (!pkgVer.Equals(version, StringComparison.OrdinalIgnoreCase)) continue;
+
+                                                var installPath = pkg.InstalledPath;
+                                                if (string.IsNullOrEmpty(installPath)) continue;
+
+                                                var exe = Path.Combine(installPath, "Blender", "blender.exe");
+                                                if (!File.Exists(exe)) exe = Path.Combine(installPath, "Blender", "blender-launcher.exe");
+                                                if (!File.Exists(exe)) exe = Path.Combine(installPath, "blender.exe");
+                                                if (!File.Exists(exe)) exe = Path.Combine(installPath, "blender-launcher.exe");
+                                                if (File.Exists(exe)) { info.ExecutablePath = exe; break; }
+                                            }
+                                            catch { }
                                         }
                                     }
-
-                                    // Fallback to top-level alias (standard but version-agnostic)
-                                    var alias = Path.Combine(root, "blender-launcher.exe");
-                                    if (File.Exists(alias))
-                                    {
-                                        info.ExecutablePath = alias;
-                                        // Don't break here, we might find a better versioned one
-                                    }
+                                    catch { }
+                                    if (!string.IsNullOrEmpty(info.ExecutablePath)) break;
                                 }
                                 else
                                 {
@@ -104,22 +227,20 @@ namespace BlendHub.Services
                                     {
                                         var exe = Path.Combine(installDir, "blender.exe");
                                         if (!File.Exists(exe)) exe = Path.Combine(installDir, "blender-launcher.exe");
-
-                                        if (File.Exists(exe))
-                                        {
-                                            info.ExecutablePath = exe;
-                                            break;
-                                        }
+                                        if (File.Exists(exe)) { info.ExecutablePath = exe; break; }
                                     }
                                 }
                             }
-                            catch { /* Handle permission issues with WindowsApps */ }
+                            catch { }
                         }
-
-                        versions.Add(info);
                     }
+
+                    versions.Add(info);
                 }
             }
+
+
+
 
             // Add custom blender paths from settings if they exist and are not already in the list
             var customPaths = AppSettingsService.Instance.Settings.CustomBlenderPaths;
@@ -142,7 +263,12 @@ namespace BlendHub.Services
                 }
             }
 
-            return versions.OrderByDescending(v => v.Version).ToList();
+            var sortedVersions = versions.OrderByDescending(v => v.Version).ToList();
+            for (int i = 0; i < sortedVersions.Count; i++)
+            {
+                sortedVersions[i].ShowDivider = (i < sortedVersions.Count - 1);
+            }
+            return sortedVersions;
         }
 
         public void LaunchBlender(string exePath)
@@ -171,7 +297,6 @@ namespace BlendHub.Services
             {
                 new BackupItem { Name = "Addons", RelativePath = "scripts/addons", IsFolder = true, Category = "Extensions & Tools" },
                 new BackupItem { Name = "Extensions", RelativePath = "scripts/extensions", IsFolder = true, Category = "Extensions & Tools" },
-                new BackupItem { Name = "Modules", RelativePath = "scripts/modules", IsFolder = true, Category = "Extensions & Tools" },
                 new BackupItem { Name = "Presets", RelativePath = "scripts/presets", IsFolder = true, Category = "Extensions & Tools" },
 
                 new BackupItem { Name = "Preferences", RelativePath = "config/userpref.blend", IsFolder = false, Category = "Preferences & Configuration" },
@@ -358,6 +483,30 @@ namespace BlendHub.Services
             {
                 System.Diagnostics.Process.Start("explorer.exe", backupRoot);
             }
+        }
+        /// <summary>
+        /// Extracts major.minor version from a folder name like "Blender 4.2" or "Blender 3.6".
+        /// </summary>
+        private static string? ExtractVersionFromName(string dirName)
+        {
+            // Match patterns like "Blender 4.2", "Blender4.2", "blender-4.2"
+            var match = System.Text.RegularExpressions.Regex.Match(dirName, @"(\d+\.\d+)");
+            return match.Success ? match.Groups[1].Value : null;
+        }
+
+        /// <summary>
+        /// Extracts major.minor from a full version string like "4.2.0" or "4.2.1.0".
+        /// </summary>
+        private static string? ExtractMajorMinor(string? fullVersion)
+        {
+            if (string.IsNullOrEmpty(fullVersion)) return null;
+
+            var parts = fullVersion.Split('.');
+            if (parts.Length >= 2 && int.TryParse(parts[0], out _) && int.TryParse(parts[1], out _))
+            {
+                return $"{parts[0]}.{parts[1]}";
+            }
+            return null;
         }
     }
 }

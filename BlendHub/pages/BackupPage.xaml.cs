@@ -38,6 +38,32 @@ namespace BlendHub.Pages
             base.OnNavigatedTo(e);
             LoadVersions();
             RefreshManageBackupsList();
+
+            if (App.MainWindow != null)
+            {
+                App.MainWindow.Activated += MainWindow_Activated;
+            }
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            if (App.MainWindow != null)
+            {
+                App.MainWindow.Activated -= MainWindow_Activated;
+            }
+        }
+
+        private void MainWindow_Activated(object sender, WindowActivatedEventArgs e)
+        {
+            if (e.WindowActivationState != WindowActivationState.Deactivated)
+            {
+                if (VersionComboBox.SelectedItem is BlenderVersionInfo info)
+                {
+                    RefreshItems(info.ConfigPath);
+                }
+                RefreshManageBackupsList();
+            }
         }
 
         private void LoadVersions()
@@ -59,49 +85,11 @@ namespace BlendHub.Pages
 
         private void RefreshItems(string versionPath)
         {
-            _backupItems.Clear();
-            var items = _blenderService.GetDefaultBackupItems(versionPath);
-            foreach (var item in items)
-            {
-                var vm = new ConfigItemViewModel
-                {
-                    Name = item.Name,
-                    IsEnabled = item.IsEnabled,
-                    IsExists = item.Exists,
-                    TooltipText = item.Category, // Using Category as Tooltip for now if Tooltip is empty, or just use Category
-                    Category = item.Category,
-                    RelativePath = item.RelativePath,
-                    IsFolder = item.IsFolder
-                };
-                vm.PropertyChanged += (s, e) => ValidateBackupState();
-                _backupItems.Add(vm);
-            }
-
-            // Group by category and update view
-            var groups = _backupItems
-                .GroupBy(i => i.Category)
-                .OrderBy(g => GetCategoryOrder(g.Key))
-                .Select(g => new CategoryGroup
-                {
-                    Key = g.Key,
-                    Items = g.ToList()
-                })
-                .ToList();
-
-            GroupedBackupItems.Source = groups;
+            BlenderPageHelper.RefreshConfigItems(_backupItems, versionPath, _blenderService, 
+                (vm) => ValidateBackupState(), GroupedBackupItems);
             ValidateBackupState();
         }
 
-        private int GetCategoryOrder(string category)
-        {
-            return category switch
-            {
-                "Extensions & Tools" => 1,
-                "Preferences & Configuration" => 2,
-                "History & Recent Data" => 3,
-                _ => 99
-            };
-        }
 
         private void ValidateBackupState()
         {
@@ -120,6 +108,7 @@ namespace BlendHub.Pages
                     WarningInfoBar.Title = "Missing Location";
                     WarningInfoBar.Message = "Please specify a Backup Destination.";
                     WarningInfoBar.IsClosable = true;
+                    WarningInfoBar.Severity = InfoBarSeverity.Warning;
                 }
                 else if (!hasItems)
                 {
@@ -127,6 +116,7 @@ namespace BlendHub.Pages
                     WarningInfoBar.Title = "No Items Selected";
                     WarningInfoBar.Message = "Please select at least one item to include in the backup.";
                     WarningInfoBar.IsClosable = true;
+                    WarningInfoBar.Severity = InfoBarSeverity.Warning;
                 }
                 else
                 {
@@ -135,12 +125,11 @@ namespace BlendHub.Pages
                     WarningInfoBar.Title = "No Backups Available";
                     WarningInfoBar.Message = "You haven't created any backups yet.";
                     WarningInfoBar.IsClosable = false;
+                    WarningInfoBar.Severity = InfoBarSeverity.Informational;
                 }
 
-                WarningInfoBar.Severity = InfoBarSeverity.Warning;
                 WarningInfoBar.IsOpen = true;
                 if (SuccessInfoBar != null) SuccessInfoBar.IsOpen = false;
-                UpdateInfoBarSpacing();
             }
             else
             {
@@ -160,7 +149,6 @@ namespace BlendHub.Pages
                 WarningInfoBar.Title = "No Version Selected";
                 WarningInfoBar.Message = "Please select a Blender version to backup.";
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
                 return;
             }
 
@@ -169,7 +157,6 @@ namespace BlendHub.Pages
                 WarningInfoBar.Title = "No Destination";
                 WarningInfoBar.Message = "Please select a backup destination folder.";
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
                 return;
             }
 
@@ -179,7 +166,6 @@ namespace BlendHub.Pages
                 WarningInfoBar.Title = "No Items Selected";
                 WarningInfoBar.Message = "Please enable at least one item to include in the backup.";
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
                 return;
             }
 
@@ -260,7 +246,6 @@ namespace BlendHub.Pages
                 {
                     DispatcherQueue.TryEnqueue(() =>
                     {
-                        StatusText.Text = msg;
                         BackupProgressBar.IsIndeterminate = false;
                         BackupProgressBar.Value = progress * 100;
                     });
@@ -268,16 +253,13 @@ namespace BlendHub.Pages
 
                 SuccessInfoBar.Message = $"Your Blender settings have been backed up to {Path.Combine(AppSettingsService.Instance.Settings.BackupDirectory, backupName)}";
                 SuccessInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
             }
             catch (Exception ex)
             {
-                StatusText.Text = $"Error: {ex.Message}";
                 WarningInfoBar.Severity = InfoBarSeverity.Error;
                 WarningInfoBar.Title = "Backup Failed";
                 WarningInfoBar.Message = ex.Message;
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
             }
             finally
             {
@@ -320,7 +302,6 @@ namespace BlendHub.Pages
                 WarningInfoBar.Title = "No Destination";
                 WarningInfoBar.Message = "Please set a backup destination first.";
                 WarningInfoBar.IsOpen = true;
-                UpdateInfoBarSpacing();
                 return;
             }
 
@@ -385,6 +366,8 @@ namespace BlendHub.Pages
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.None,
                 XamlRoot = this.XamlRoot,
+                Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                RequestedTheme = (App.MainWindow.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default,
                 CloseButtonStyle = Application.Current.Resources["DefaultButtonStyle"] as Style
             };
 
@@ -397,7 +380,6 @@ namespace BlendHub.Pages
                     RefreshManageBackupsList();
                     SuccessInfoBar.Message = $"Backup '{backupName}' deleted successfully.";
                     SuccessInfoBar.IsOpen = true;
-                    UpdateInfoBarSpacing();
                 }
                 catch (Exception ex)
                 {
@@ -405,16 +387,8 @@ namespace BlendHub.Pages
                     WarningInfoBar.Title = "Delete Failed";
                     WarningInfoBar.Message = ex.Message;
                     WarningInfoBar.IsOpen = true;
-                    UpdateInfoBarSpacing();
                 }
             }
-        }
-        private void InfoBar_Closed(InfoBar sender, InfoBarClosedEventArgs args) => UpdateInfoBarSpacing();
-
-        private void UpdateInfoBarSpacing()
-        {
-            bool anyOpen = WarningInfoBar.IsOpen || ErrorInfoBar.IsOpen || SuccessInfoBar.IsOpen;
-            InfoBarPanel.Margin = anyOpen ? new Thickness(0, 16, 0, 16) : new Thickness(0);
         }
     }
 }

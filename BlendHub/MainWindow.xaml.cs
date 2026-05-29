@@ -26,7 +26,7 @@ namespace BlendHub
             { "restore", typeof(RestorePage) },
             { "sync", typeof(SyncPage) },
             { "project", typeof(ProjectPage) },
-            { "referenceboard", typeof(BlendHub.ReferenceBoard.ReferenceBoard) },
+            { "canvas", typeof(BlendHub.ReferenceBoard.ReferenceBoard) },
             { "addons", typeof(AddonsPage) },
             { "settings", typeof(SettingsPage) }
         };
@@ -92,7 +92,7 @@ namespace BlendHub
 
                     // Set minimum window size
                     presenter.PreferredMinimumWidth = 840;
-                    presenter.PreferredMinimumHeight = 650;
+                    presenter.PreferredMinimumHeight = 500;
                 }
             }
 
@@ -151,6 +151,58 @@ namespace BlendHub
                 {
                     Navigate(targetPage);
                 }
+
+                UpdateNavigationViewIcons(item);
+            }
+        }
+
+        private void UpdateNavigationViewIcons(NavigationViewItem selectedItem)
+        {
+            foreach (var menuItem in NavView.MenuItems.OfType<NavigationViewItem>())
+            {
+                SetItemIconState(menuItem, false);
+            }
+            foreach (var menuItem in NavView.FooterMenuItems.OfType<NavigationViewItem>())
+            {
+                SetItemIconState(menuItem, false);
+            }
+
+            if (selectedItem != null)
+            {
+                SetItemIconState(selectedItem, true);
+            }
+        }
+
+        private void SetItemIconState(NavigationViewItem item, bool isSelected)
+        {
+            if (item.Icon is PathIcon pathIcon)
+            {
+                string? tag = item.Tag?.ToString();
+                string? iconName = tag switch
+                {
+                    "home" => "home",
+                    "project" => "project",
+                    "canvas" => "canvas",
+                    "download" => "download",
+                    "addons" => "addons",
+                    "backup" => "backup",
+                    "restore" => "restore",
+                    "sync" => "sync",
+                    "feedback" => "feedback",
+                    "settings" => "settings",
+                    _ => null
+                };
+
+                if (iconName != null)
+                {
+                    string state = (isSelected && iconName != "feedback") ? "filled" : "outline";
+                    string resourceKey = $"{iconName}_{state}";
+
+                    if (Application.Current.Resources.TryGetValue(resourceKey, out object geometryString))
+                    {
+                        pathIcon.Data = (Microsoft.UI.Xaml.Media.Geometry)Microsoft.UI.Xaml.Markup.XamlBindingHelper.ConvertValue(typeof(Microsoft.UI.Xaml.Media.Geometry), geometryString);
+                    }
+                }
             }
         }
 
@@ -166,14 +218,21 @@ namespace BlendHub
 
         private async void ShowFeedbackDialog()
         {
-            var dialog = new BlendHub.Dialogs.FeedbackDialog
+            try
             {
-                XamlRoot = this.Content.XamlRoot,
-                Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
-                RequestedTheme = (this.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default
-            };
+                var dialog = new BlendHub.Dialogs.FeedbackDialog
+                {
+                    XamlRoot = this.Content.XamlRoot,
+                    Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                    RequestedTheme = (this.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default
+                };
 
-            await dialog.ShowAsync();
+                await dialog.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainWindow] Error showing feedback dialog: {ex.Message}");
+            }
         }
 
         // Splash Screen Helpers

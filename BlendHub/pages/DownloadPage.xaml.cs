@@ -3,7 +3,6 @@ using BlendHub.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
-using BlendHub.Controls;
 using BlendHub.Dialogs;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

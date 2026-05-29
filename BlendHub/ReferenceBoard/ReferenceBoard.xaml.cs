@@ -79,6 +79,8 @@ namespace BlendHub.ReferenceBoard
             RefreshSavedProjectsList();
             _isUpdatingUI = false;
             UpdateShapePreviewUI();
+
+            this.Loaded += (s, e) => this.Focus(FocusState.Programmatic);
         }
 
         private void InitializeMainTools()

@@ -4,16 +4,40 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:BlendHub"
-    xmlns:converters="using:BlendHub.Converters">
+    xmlns:converters="using:BlendHub.Converters"
+    xmlns:models="using:BlendHub.Models">
     <Application.Resources>
         <ResourceDictionary>
             <converters:StringToBoolConverter x:Key="StringToBoolConverter" />
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
             <FontFamily x:Key="SymbolThemeFontFamily">Segoe Fluent Icons, ms-appx:///Assets/Font/Segoe Fluent Icons.ttf#Segoe Fluent Icons</FontFamily>
+            
+            <!-- Shared DataTemplate for grouped ConfigItemViewModel items -->
+            <DataTemplate x:Key="GroupedConfigItemsTemplate">
+                <StackPanel HorizontalAlignment="Stretch" Margin="0">
+                    <TextBlock Text="{Binding Key}"
+                         Style="{StaticResource BodyStrongTextBlockStyle}"
+                         Margin="0,0,0,12"
+                         Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                    <ItemsRepeater ItemsSource="{Binding Items}">
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox Content="{Binding Name}"
+                                    IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                    IsEnabled="{Binding IsExists}"
+                                    Margin="0,2,0,2"
+                                    ToolTipService.ToolTip="{Binding TooltipText}" />
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </StackPanel>
+            </DataTemplate>
+            
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <ResourceDictionary Source="ReferenceBoard/ReferenceBoardStyles.xaml" />
+                <ResourceDictionary Source="Icons.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

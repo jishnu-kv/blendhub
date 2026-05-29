@@ -48,6 +48,7 @@ namespace BlendHub.ReferenceBoard
         protected FrameworkElement? _endVisual;
 
         protected RotateTransform? _rotationTransform;
+        private double _rotationValue = 0;
         protected CompositeTransform? _toolbarScaleTransform;
         protected FrameworkElement? _floatingToolbar;
         protected FrameworkElement? _selectionOutline;
@@ -116,8 +117,12 @@ namespace BlendHub.ReferenceBoard
 
         public new double Rotation
         {
-            get => _rotationTransform?.Angle ?? 0;
-            set { if (_rotationTransform != null) _rotationTransform.Angle = value; }
+            get => _rotationValue;
+            set
+            {
+                _rotationValue = value;
+                if (_rotationTransform != null) _rotationTransform.Angle = value;
+            }
         }
 
         public double ZoomFactor
@@ -272,6 +277,10 @@ namespace BlendHub.ReferenceBoard
         {
             base.OnApplyTemplate();
             _rotationTransform = GetTemplateChild("RotationTransform") as RotateTransform;
+            if (_rotationTransform != null)
+            {
+                _rotationTransform.Angle = _rotationValue;
+            }
             _toolbarScaleTransform = GetTemplateChild("ToolbarScaleTransform") as CompositeTransform;
             _floatingToolbar = GetTemplateChild("FloatingToolbar") as FrameworkElement;
             _itemSpecificToolbarContent = GetTemplateChild("ItemSpecificToolbarContent") as ContentControl;

@@ -328,9 +328,10 @@ namespace BlendHub.ReferenceBoard
                 try { InfiniteCanvasArea.CapturePointer(e.Pointer); } catch { }
                 e.Handled = true;
             }
-            // Selection mode: Left button on empty canvas
-            else if (props.IsLeftButtonPressed && e.OriginalSource is Canvas c2 && c2 == InfiniteCanvasArea)
+            // Selection mode: Left button on empty canvas or background container
+            else if (props.IsLeftButtonPressed && (ReferenceEquals(e.OriginalSource, InfiniteCanvasArea) || ReferenceEquals(e.OriginalSource, CanvasContainer)))
             {
+                this.Focus(FocusState.Programmatic);
                 bool isMultiSelect = e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control) ||
                                      e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Shift);
 

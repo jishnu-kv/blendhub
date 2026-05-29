@@ -60,6 +60,12 @@ namespace BlendHub.Controls
                 // Try to load instantly from cache or load async
                 LoadThumbnailForProject(newProject);
                 
+                // Expand expander by default if settings specify it
+                if (CardExpander != null && AppSettingsService.Instance.Settings.ExpandFoldersByDefault)
+                {
+                    CardExpander.IsExpanded = true;
+                }
+
                 // If expander is already open, reload details
                 if (CardExpander != null && CardExpander.IsExpanded)
                 {
@@ -623,6 +629,18 @@ namespace BlendHub.Controls
                     foreach (var file in allBlendFiles)
                     {
                         string relFolder = Path.GetDirectoryName(Path.GetRelativePath(Project.Path, file.FullName)) ?? "";
+                        
+                        // Check if we should filter nested files (only root and immediate subfolder)
+                        if (AppSettingsService.Instance.Settings.FilterNestedBlendFiles)
+                        {
+                            string[] parts = relFolder.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+                            if (parts.Length > 1)
+                            {
+                                // Deeper than immediate subfolder, ignore
+                                continue;
+                            }
+                        }
+
                         bool isPrimary = file.FullName.Equals(Project.FullBlendPath, StringComparison.OrdinalIgnoreCase);
 
                         var vm = new ProjectFileViewModel(
@@ -649,41 +667,65 @@ namespace BlendHub.Controls
             }
 
             // 3. Scan for configured external launchers and custom files (Launchers tab)
-            if (Project.FileLaunchers.Count > 0 && Project.FolderExists)
+            if (Project.FolderExists)
             {
-                var launcherExts = new HashSet<string>(Project.FileLaunchers.Keys, StringComparer.OrdinalIgnoreCase);
-                try
+                // Merge project-specific launchers with global default launchers
+                var mergedLaunchers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                
+                // Add global default launchers from settings
+                foreach (var kvp in AppSettingsService.Instance.Settings.DefaultLaunchers)
                 {
-                    var allFiles = new DirectoryInfo(Project.Path).GetFiles("*.*", SearchOption.AllDirectories);
-                    foreach (var file in allFiles)
+                    if (!string.IsNullOrWhiteSpace(kvp.Value))
                     {
-                        string ext = file.Extension.ToLowerInvariant();
-                        if (launcherExts.Contains(ext) && !ext.Equals(".blend", StringComparison.OrdinalIgnoreCase))
-                        {
-                            string programPath = Project.FileLaunchers[ext];
-                            string programName = Path.GetFileNameWithoutExtension(programPath);
-                            string relFolder = Path.GetDirectoryName(Path.GetRelativePath(Project.Path, file.FullName)) ?? "";
-
-                            var vm = new ProjectFileViewModel(
-                                file.Name,
-                                string.IsNullOrEmpty(relFolder) || relFolder == "." ? "Project Root" : relFolder,
-                                file.FullName,
-                                programPath,
-                                programName,
-                                false
-                            )
-                            {
-                                Size = FormatBytes(file.Length),
-                                Modified = file.LastWriteTime.ToString("g"),
-                                Project = Project
-                            };
-                            
-                            _allCustomLaunchers.Add(vm);
-                            _ = LoadFileIconAsync(file.FullName, vm);
-                        }
+                        mergedLaunchers[kvp.Key] = kvp.Value;
                     }
                 }
-                catch { }
+                
+                // Override with project-specific launchers (project takes precedence)
+                foreach (var kvp in Project.FileLaunchers)
+                {
+                    if (!string.IsNullOrWhiteSpace(kvp.Value))
+                    {
+                        mergedLaunchers[kvp.Key] = kvp.Value;
+                    }
+                }
+                
+                if (mergedLaunchers.Count > 0)
+                {
+                    var launcherExts = new HashSet<string>(mergedLaunchers.Keys, StringComparer.OrdinalIgnoreCase);
+                    try
+                    {
+                        var allFiles = new DirectoryInfo(Project.Path).GetFiles("*.*", SearchOption.AllDirectories);
+                        foreach (var file in allFiles)
+                        {
+                            string ext = file.Extension.ToLowerInvariant();
+                            if (launcherExts.Contains(ext) && !ext.Equals(".blend", StringComparison.OrdinalIgnoreCase))
+                            {
+                                string programPath = mergedLaunchers[ext];
+                                string programName = Path.GetFileNameWithoutExtension(programPath);
+                                string relFolder = Path.GetDirectoryName(Path.GetRelativePath(Project.Path, file.FullName)) ?? "";
+
+                                var vm = new ProjectFileViewModel(
+                                    file.Name,
+                                    string.IsNullOrEmpty(relFolder) || relFolder == "." ? "Project Root" : relFolder,
+                                    file.FullName,
+                                    programPath,
+                                    programName,
+                                    false
+                                )
+                                {
+                                    Size = FormatBytes(file.Length),
+                                    Modified = file.LastWriteTime.ToString("g"),
+                                    Project = Project
+                                };
+                                
+                                _allCustomLaunchers.Add(vm);
+                                _ = LoadFileIconAsync(file.FullName, vm);
+                            }
+                        }
+                    }
+                    catch { }
+                }
             }
 
             foreach (var storedPath in Project.CustomFiles)
@@ -1036,8 +1078,9 @@ namespace BlendHub.Controls
                 // Thin Divider
                 var separator = new Border { BorderThickness = new Thickness(0, 0, 0, 1), BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"], Margin = new Thickness(0, 2, 0, 0) };
 
-                // Hide the "Blender Version" column header — not relevant for launchers
-                versionHeader.Visibility = Visibility.Collapsed;
+                // Change the header to "Launcher" and ensure it is visible
+                versionHeader.Text = "Launcher";
+                versionHeader.Visibility = Visibility.Visible;
 
                 // 2. ListView
                 var listView = new ListView
@@ -1416,7 +1459,7 @@ namespace BlendHub.Controls
                             File.Move(vm.FullPath, newFullPath);
 
                             // Update Project models if this was the primary blend file or in custom files
-                            if (vm.FullPath.Equals(Project?.FullBlendPath, StringComparison.OrdinalIgnoreCase))
+                            if (vm.FullPath.Equals(Project.FullBlendPath, StringComparison.OrdinalIgnoreCase))
                             {
                                 Project.BlendFileName = newName + ext;
                                 ProjectService.UpdateProject(Project);
@@ -1462,7 +1505,7 @@ namespace BlendHub.Controls
                             File.Delete(vm.FullPath);
 
                             // Update Project if it was primary blend file
-                            if (vm.FullPath.Equals(Project?.FullBlendPath, StringComparison.OrdinalIgnoreCase))
+                            if (vm.FullPath.Equals(Project.FullBlendPath, StringComparison.OrdinalIgnoreCase))
                             {
                                 Project.BlendFileName = "";
                                 ProjectService.UpdateProject(Project);
