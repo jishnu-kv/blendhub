@@ -188,14 +188,13 @@ namespace BlendHub
                     "backup" => "backup",
                     "restore" => "restore",
                     "sync" => "sync",
-                    "feedback" => "feedback",
                     "settings" => "settings",
                     _ => null
                 };
 
                 if (iconName != null)
                 {
-                    string state = (isSelected && iconName != "feedback") ? "filled" : "outline";
+                    string state = isSelected ? "filled" : "outline";
                     string resourceKey = $"{iconName}_{state}";
 
                     if (Application.Current.Resources.TryGetValue(resourceKey, out object geometryString))
@@ -203,35 +202,6 @@ namespace BlendHub
                         pathIcon.Data = (Microsoft.UI.Xaml.Media.Geometry)Microsoft.UI.Xaml.Markup.XamlBindingHelper.ConvertValue(typeof(Microsoft.UI.Xaml.Media.Geometry), geometryString);
                     }
                 }
-            }
-        }
-
-        private async void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
-        {
-            // Check if the clicked item is the Feedback button using its Tag
-            if (args.InvokedItemContainer != null && args.InvokedItemContainer.Tag?.ToString() == "feedback")
-            {
-                // Show feedback dialog without changing navigation selection
-                ShowFeedbackDialog();
-            }
-        }
-
-        private async void ShowFeedbackDialog()
-        {
-            try
-            {
-                var dialog = new BlendHub.Dialogs.FeedbackDialog
-                {
-                    XamlRoot = this.Content.XamlRoot,
-                    Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
-                    RequestedTheme = (this.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default
-                };
-
-                await dialog.ShowAsync();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[MainWindow] Error showing feedback dialog: {ex.Message}");
             }
         }
 

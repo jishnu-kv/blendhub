@@ -39,12 +39,19 @@ namespace BlendHub.Pages
             }
         }
 
+        private void SetLoadingState(bool isLoading)
+        {
+            RefreshButton.IsEnabled = !isLoading;
+            RefreshButtonIcon.Visibility = isLoading ? Visibility.Collapsed : Visibility.Visible;
+            RefreshProgressRing.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         private async Task LoadVersionsAsync()
         {
             if (_isLoading) return;
             _isLoading = true;
 
-            LoadingPanel.Visibility = Visibility.Visible;
+            SetLoadingState(true);
             ErrorInfoBar.IsOpen = false;
 
             try
@@ -60,7 +67,7 @@ namespace BlendHub.Pages
             finally
             {
                 _isLoading = false;
-                LoadingPanel.Visibility = Visibility.Collapsed;
+                SetLoadingState(false);
             }
         }
 
@@ -106,16 +113,32 @@ namespace BlendHub.Pages
                 var versionInfo = versionEntry.Value;
                 if (versionInfo.WindowsInstallers?.Count > 0)
                 {
-                    var fullVersion = VersionHelper.GetFullVersionFromFilename(versionInfo.WindowsInstallers[0].Filename);
-                    var shortVersion = VersionHelper.GetShortVersion(fullVersion);
+                    // Find the latest installer based on version (and date)
+                    var sortedInstallers = versionInfo.WindowsInstallers
+                        .Select(installer => {
+                            var fullV = VersionHelper.GetFullVersionFromFilename(installer.Filename);
+                            var parsedV = VersionHelper.ParseVersion(fullV);
+                            DateTime.TryParse(installer.ReleaseDate, out var rDate);
+                            return new { Installer = installer, ParsedVersion = parsedV, ReleaseDate = rDate, FullVersion = fullV };
+                        })
+                        .OrderByDescending(x => x.ParsedVersion)
+                        .ThenByDescending(x => x.ReleaseDate)
+                        .ToList();
 
-                    if (!versionGroupsBuilder.ContainsKey(shortVersion))
+                    if (sortedInstallers.Count > 0)
                     {
-                        versionGroupsBuilder[shortVersion] = (
-                            fullVersion,
-                            versionInfo.WindowsInstallers[0].ReleaseDate,
-                            versionInfo.WindowsInstallers.Count
-                        );
+                        var latestInstaller = sortedInstallers[0];
+                        var fullVersion = latestInstaller.FullVersion;
+                        var shortVersion = VersionHelper.GetShortVersion(fullVersion);
+
+                        if (!versionGroupsBuilder.ContainsKey(shortVersion))
+                        {
+                            versionGroupsBuilder[shortVersion] = (
+                                fullVersion,
+                                latestInstaller.Installer.ReleaseDate,
+                                versionInfo.WindowsInstallers.Count
+                            );
+                        }
                     }
                 }
             }
@@ -260,9 +283,7 @@ namespace BlendHub.Pages
 
         private async void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
-            RefreshButton.IsEnabled = false;
-            RefreshButtonIcon.Visibility = Visibility.Collapsed;
-            RefreshProgressRing.Visibility = Visibility.Visible;
+            SetLoadingState(true);
 
             try
             {
@@ -276,9 +297,7 @@ namespace BlendHub.Pages
             }
             finally
             {
-                RefreshButton.IsEnabled = true;
-                RefreshButtonIcon.Visibility = Visibility.Visible;
-                RefreshProgressRing.Visibility = Visibility.Collapsed;
+                SetLoadingState(false);
             }
         }
 

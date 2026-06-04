@@ -30,18 +30,52 @@ namespace BlendHub.Dialogs
                 BlenderVersionComboBox.SelectedIndex = 0;
             }
 
-            // Add default folders
-            var defaultFolders = AppSettingsService.Instance.Settings.DefaultFolders;
-            foreach (var folderName in defaultFolders)
-            {
-                AddFolder(folderName);
-            }
+            // Populate Presets
+            LoadPresets();
 
             // Pre-load global launchers from settings
             LoadGlobalLaunchers();
 
             FolderNamesItemsControl.ItemsSource = Folders;
             FileLaunchersItemsControl.ItemsSource = FileLaunchers;
+        }
+
+        private bool _isPresetChanging = false;
+
+        private void LoadPresets()
+        {
+            _isPresetChanging = true;
+            PresetComboBox.Items.Clear();
+            var settings = AppSettingsService.Instance.Settings;
+            foreach (var preset in settings.ProjectPresets.Keys)
+            {
+                PresetComboBox.Items.Add(preset);
+            }
+            PresetComboBox.SelectedItem = settings.SelectedPreset;
+
+            PopulateFoldersFromSelectedPreset();
+            _isPresetChanging = false;
+        }
+
+        private void PopulateFoldersFromSelectedPreset()
+        {
+            Folders.Clear();
+            var settings = AppSettingsService.Instance.Settings;
+            var presetName = PresetComboBox.SelectedItem as string ?? settings.SelectedPreset;
+            if (settings.ProjectPresets.TryGetValue(presetName, out var folders))
+            {
+                foreach (var folderName in folders)
+                {
+                    AddFolder(folderName);
+                }
+            }
+            RaiseValidationChanged();
+        }
+
+        private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isPresetChanging) return;
+            PopulateFoldersFromSelectedPreset();
         }
 
         private void LoadGlobalLaunchers()
@@ -192,12 +226,7 @@ namespace BlendHub.Dialogs
             picker.SuggestedStartLocation = PickerLocationId.ComputerFolder;
             picker.FileTypeFilter.Add(".exe");
 
-            var window = App.MainWindow;
-            if (window != null)
-            {
-                IntPtr hwnd = WindowNative.GetWindowHandle(window);
-                InitializeWithWindow.Initialize(picker, hwnd);
-            }
+            BlendHub.Helpers.WindowHelper.InitializeWithWindow(picker);
 
             var file = await picker.PickSingleFileAsync();
             if (file != null)
@@ -214,12 +243,7 @@ namespace BlendHub.Dialogs
             folderPicker.SuggestedStartLocation = PickerLocationId.ComputerFolder;
             folderPicker.FileTypeFilter.Add("*");
 
-            var window = App.MainWindow;
-            if (window != null)
-            {
-                IntPtr hwnd = WindowNative.GetWindowHandle(window);
-                InitializeWithWindow.Initialize(folderPicker, hwnd);
-            }
+            BlendHub.Helpers.WindowHelper.InitializeWithWindow(folderPicker);
 
             var folder = await folderPicker.PickSingleFolderAsync();
             if (folder != null)

@@ -299,8 +299,7 @@
             IsTabStop="False"
             IsPaneOpen="False"
             DisplayModeChanged="NavView_DisplayModeChanged"
-            SelectionChanged="NavView_SelectionChanged"
-            ItemInvoked="NavView_ItemInvoked">
+            SelectionChanged="NavView_SelectionChanged">
 
             <NavigationView.MenuItems>
                 <NavigationViewItem x:Name="HomeItem" Content="Home" Tag="home"
@@ -365,16 +364,6 @@
             </NavigationView.MenuItems>
 
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem x:Name="FeedbackItem"
-                                    Content="Feedback"
-                                    Tag="feedback"
-                                    SelectsOnInvoked="False"
-                                    AutomationProperties.AutomationId="FeedbackItem">
-                    <NavigationViewItem.Icon>
-                        <PathIcon Width="24" Height="24" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                
                 <NavigationViewItem x:Name="SettingsItem" Content="Settings" Tag="settings" 
                                     AutomationProperties.AutomationId="SettingsItem">
                     <NavigationViewItem.Icon>

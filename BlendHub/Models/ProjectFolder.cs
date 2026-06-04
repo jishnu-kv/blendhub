@@ -87,4 +87,69 @@ namespace BlendHub.Models
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
+
+    public class BlenderInstallationViewModel : INotifyPropertyChanged
+    {
+        public string DisplayName { get; set; } = string.Empty;
+        public string ExecutablePath { get; set; } = string.Empty;
+        public string Version { get; set; } = string.Empty;
+        public bool IsCustom { get; set; }
+
+        private bool _isVisible = true;
+        public bool IsVisible
+        {
+            get => _isVisible;
+            set
+            {
+                if (_isVisible != value)
+                {
+                    _isVisible = value;
+                    OnPropertyChanged(nameof(IsVisible));
+                }
+            }
+        }
+
+        private string _launchArguments = string.Empty;
+        public string LaunchArguments
+        {
+            get => _launchArguments;
+            set
+            {
+                if (_launchArguments != value)
+                {
+                    _launchArguments = value;
+                    OnPropertyChanged(nameof(LaunchArguments));
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    public class ScanFolderInfo : INotifyPropertyChanged
+    {
+        private string _path = string.Empty;
+
+        public string Path
+        {
+            get => _path;
+            set
+            {
+                if (_path != value)
+                {
+                    _path = value;
+                    OnPropertyChanged(nameof(Path));
+                }
+            }
+        }
+
+        public ScanFolderInfo(string path)
+        {
+            Path = path;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }

@@ -201,12 +201,7 @@ namespace BlendHub.Dialogs
             picker.SuggestedStartLocation = PickerLocationId.ComputerFolder;
             picker.FileTypeFilter.Add(".exe");
 
-            var window = App.MainWindow;
-            if (window != null)
-            {
-                IntPtr hwnd = WindowNative.GetWindowHandle(window);
-                InitializeWithWindow.Initialize(picker, hwnd);
-            }
+            BlendHub.Helpers.WindowHelper.InitializeWithWindow(picker);
 
             var file = await picker.PickSingleFileAsync();
             if (file != null)

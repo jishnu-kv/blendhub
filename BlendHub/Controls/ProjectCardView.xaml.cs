@@ -4,6 +4,7 @@ using BlendHub.Services;
 using CommunityToolkit.WinUI.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
@@ -59,7 +60,7 @@ namespace BlendHub.Controls
 
                 // Try to load instantly from cache or load async
                 LoadThumbnailForProject(newProject);
-                
+
                 // Expand expander by default if settings specify it
                 if (CardExpander != null && AppSettingsService.Instance.Settings.ExpandFoldersByDefault)
                 {
@@ -115,6 +116,9 @@ namespace BlendHub.Controls
 
         private string _searchQuery = "";
         private int _previousTabIndex = -1;
+        private ObservableCollection<FolderViewModel> _locationFolders = new();
+        private List<FolderViewModel> _allLocationFolders = new();
+        private UIElement? _locationsPanel;
 
         public ProjectCardView()
         {
@@ -153,11 +157,12 @@ namespace BlendHub.Controls
 
         private void UpdateTabTextVisibility(double windowWidth)
         {
-            var visibility = windowWidth <= 940 ? Visibility.Collapsed : Visibility.Visible;
+            var visibility = windowWidth <= 1000 ? Visibility.Collapsed : Visibility.Visible;
             if (FilesTabText != null) FilesTabText.Visibility = visibility;
             if (NotesTabText != null) NotesTabText.Visibility = visibility;
             if (TasksTabText != null) TasksTabText.Visibility = visibility;
             if (LaunchersTabText != null) LaunchersTabText.Visibility = visibility;
+            if (DirectoriesTabText != null) DirectoriesTabText.Visibility = visibility;
         }
 
         private void Thumbnail_Loaded(object sender, RoutedEventArgs e)
@@ -272,7 +277,7 @@ namespace BlendHub.Controls
             };
             picker.FileTypeFilter.Add("*");
 
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow));
+            BlendHub.Helpers.WindowHelper.InitializeWithWindow(picker);
 
             var folder = await picker.PickSingleFolderAsync();
             if (folder != null)
@@ -339,6 +344,9 @@ namespace BlendHub.Controls
 
             _notesPanel = null;
             _tasksPanel = null;
+            _locationsPanel = null;
+            _locationFolders.Clear();
+            _allLocationFolders.Clear();
 
             if (ContentSelectorBar != null)
             {
@@ -362,29 +370,31 @@ namespace BlendHub.Controls
         {
             if (Project == null || ContentContainer == null) return;
 
-            AddNoteBtn.Visibility = (tabIndex == 1 || tabIndex == 2) ? Visibility.Visible : Visibility.Collapsed;
-            
-            if (tabIndex == 1) 
+            AddNoteBtn.Visibility = (tabIndex == 3 || tabIndex == 4) ? Visibility.Visible : Visibility.Collapsed;
+
+            if (tabIndex == 3)
                 AddNoteBtn.Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new FontIcon { Glyph = "\uE70B", FontSize = 12 }, new TextBlock { Text = "Add Note", FontSize = 13 } } };
-            else if (tabIndex == 2) 
+            else if (tabIndex == 4)
                 AddNoteBtn.Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new FontIcon { Glyph = "\uF7EC", FontSize = 12 }, new TextBlock { Text = "Add Task", FontSize = 13 } } };
-            
-            AddFileBtn.Visibility = tabIndex == 3 ? Visibility.Visible : Visibility.Collapsed;
+
+            AddFileBtn.Visibility = tabIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
+            RefreshDirectoriesBtn.Visibility = tabIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
 
             UIElement? newContent = null;
             switch (tabIndex)
             {
                 case 0: LoadProjectFiles(); newContent = GetFilesPanel(); break;
-                case 1: LoadProjectItems(); newContent = GetNotesPanel(); break;
-                case 2: LoadProjectItems(); newContent = GetTasksPanel(); break;
-                case 3: LoadProjectFiles(); newContent = GetLaunchersPanel(); break;
+                case 1: newContent = GetLocationsPanel(); break;
+                case 2: LoadProjectFiles(); newContent = GetLaunchersPanel(); break;
+                case 3: LoadProjectItems(); newContent = GetNotesPanel(); break;
+                case 4: LoadProjectItems(); newContent = GetTasksPanel(); break;
             }
 
             if (newContent != null)
             {
                 ContentContainer.Content = newContent;
             }
- 
+
             UpdateSearchBoxVisibility();
         }
 
@@ -568,7 +578,7 @@ namespace BlendHub.Controls
                     {
                         var sourceList = sourceListView.ItemsSource as ObservableCollection<ProjectItemViewModel>;
                         var targetList = targetListView.ItemsSource as ObservableCollection<ProjectItemViewModel>;
-                        
+
                         sourceList?.Remove(draggedTask);
                         targetList?.Add(draggedTask);
 
@@ -589,7 +599,7 @@ namespace BlendHub.Controls
             if (Project == null) return;
             _allProjectFiles.Clear();
             _projectFiles.Clear();
-            
+
             _allCustomLaunchers.Clear();
             _customLaunchers.Clear();
 
@@ -597,7 +607,7 @@ namespace BlendHub.Controls
             var versions = _blenderService.GetInstalledVersions();
             var versionToUse = versions.FirstOrDefault(v => v.Version == Project.BlenderVersion);
             string blenderExePath = versionToUse?.ExecutablePath ?? "";
-            
+
             string blenderName = "Blender";
             if (versionToUse != null)
             {
@@ -629,7 +639,7 @@ namespace BlendHub.Controls
                     foreach (var file in allBlendFiles)
                     {
                         string relFolder = Path.GetDirectoryName(Path.GetRelativePath(Project.Path, file.FullName)) ?? "";
-                        
+
                         // Check if we should filter nested files (only root and immediate subfolder)
                         if (AppSettingsService.Instance.Settings.FilterNestedBlendFiles)
                         {
@@ -671,7 +681,7 @@ namespace BlendHub.Controls
             {
                 // Merge project-specific launchers with global default launchers
                 var mergedLaunchers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                
+
                 // Add global default launchers from settings
                 foreach (var kvp in AppSettingsService.Instance.Settings.DefaultLaunchers)
                 {
@@ -680,7 +690,7 @@ namespace BlendHub.Controls
                         mergedLaunchers[kvp.Key] = kvp.Value;
                     }
                 }
-                
+
                 // Override with project-specific launchers (project takes precedence)
                 foreach (var kvp in Project.FileLaunchers)
                 {
@@ -689,7 +699,7 @@ namespace BlendHub.Controls
                         mergedLaunchers[kvp.Key] = kvp.Value;
                     }
                 }
-                
+
                 if (mergedLaunchers.Count > 0)
                 {
                     var launcherExts = new HashSet<string>(mergedLaunchers.Keys, StringComparer.OrdinalIgnoreCase);
@@ -718,7 +728,7 @@ namespace BlendHub.Controls
                                     Modified = file.LastWriteTime.ToString("g"),
                                     Project = Project
                                 };
-                                
+
                                 _allCustomLaunchers.Add(vm);
                                 _ = LoadFileIconAsync(file.FullName, vm);
                             }
@@ -766,9 +776,9 @@ namespace BlendHub.Controls
         private void FilterProjectFiles()
         {
             var query = _searchQuery.ToLowerInvariant();
-            
-            var filtered = _allProjectFiles.Where(f => 
-                string.IsNullOrWhiteSpace(query) || 
+
+            var filtered = _allProjectFiles.Where(f =>
+                string.IsNullOrWhiteSpace(query) ||
                 f.Name.ToLowerInvariant().Contains(query)
             ).ToList();
 
@@ -793,9 +803,9 @@ namespace BlendHub.Controls
         private void FilterCustomLaunchers()
         {
             var query = _searchQuery.ToLowerInvariant();
-            
-            var filtered = _allCustomLaunchers.Where(f => 
-                string.IsNullOrWhiteSpace(query) || 
+
+            var filtered = _allCustomLaunchers.Where(f =>
+                string.IsNullOrWhiteSpace(query) ||
                 f.Name.ToLowerInvariant().Contains(query)
             ).ToList();
 
@@ -860,7 +870,7 @@ namespace BlendHub.Controls
                 {
                     var pos = e.GetPosition(targetListView);
                     int index = targetListView.Items.Count;
-                    
+
                     for (int i = 0; i < targetListView.Items.Count; i++)
                     {
                         var container = targetListView.ContainerFromIndex(i) as ListViewItem;
@@ -868,7 +878,7 @@ namespace BlendHub.Controls
                         {
                             var transform = container.TransformToVisual(targetListView);
                             var itemBounds = transform.TransformBounds(new Windows.Foundation.Rect(0, 0, container.ActualWidth, container.ActualHeight));
-                            
+
                             if (pos.Y < itemBounds.Y + itemBounds.Height / 2)
                             {
                                 index = i;
@@ -881,7 +891,7 @@ namespace BlendHub.Controls
                             }
                         }
                     }
-                    
+
                     var list = targetListView.ItemsSource as ObservableCollection<ProjectFileViewModel>;
                     if (list != null)
                     {
@@ -892,33 +902,33 @@ namespace BlendHub.Controls
                             {
                                 index--;
                             }
-                            
+
                             if (index < 0) index = 0;
                             if (index >= list.Count) index = list.Count - 1;
-                            
+
                             if (oldIndex != index)
                             {
                                 list.Move(oldIndex, index);
-                                
+
                                 int allOldIndex = _allProjectFiles.IndexOf(draggedFile);
                                 if (allOldIndex != -1)
                                 {
                                     _allProjectFiles.RemoveAt(allOldIndex);
                                     int allNewIndex = _allProjectFiles.Count;
-                                    
+
                                     if (index < list.Count)
                                     {
                                         var targetItem = list[index];
                                         allNewIndex = _allProjectFiles.IndexOf(targetItem);
                                         if (allNewIndex == -1) allNewIndex = _allProjectFiles.Count;
                                     }
-                                    
+
                                     if (allNewIndex >= _allProjectFiles.Count)
                                         _allProjectFiles.Add(draggedFile);
                                     else
                                         _allProjectFiles.Insert(allNewIndex, draggedFile);
                                 }
-                                
+
                                 if (Project != null)
                                 {
                                     string relPath = Path.GetRelativePath(Project.Path, draggedFile.FullPath);
@@ -944,7 +954,7 @@ namespace BlendHub.Controls
                                             Project.CustomFiles.Add(relPath);
                                         else
                                             Project.CustomFiles.Insert(customInsertIndex, relPath);
-                                            
+
                                         ProjectService.UpdateProject(Project);
                                     }
                                 }
@@ -1010,7 +1020,7 @@ namespace BlendHub.Controls
 
                 var emptyText = new TextBlock { Text = "No .blend files found in the project.", Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorTertiaryBrush"], HorizontalAlignment = HorizontalAlignment.Center, FontSize = 13, Margin = new Thickness(0, 40, 0, 40) };
                 var noResultsText = new TextBlock { Text = "No results found.", Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorTertiaryBrush"], HorizontalAlignment = HorizontalAlignment.Center, FontSize = 13, Margin = new Thickness(0, 40, 0, 40), Visibility = Visibility.Collapsed };
-                
+
                 _projectFiles.CollectionChanged += (s, e) =>
                 {
                     bool hasAllItems = _allProjectFiles.Count > 0;
@@ -1021,7 +1031,7 @@ namespace BlendHub.Controls
                     emptyText.Visibility = (!hasAllItems) ? Visibility.Visible : Visibility.Collapsed;
                     noResultsText.Visibility = (hasAllItems && !hasItems) ? Visibility.Visible : Visibility.Collapsed;
                 };
-                
+
                 // Initial visibility setup
                 bool initialHasAllItems = _allProjectFiles.Count > 0;
                 bool initialHasItems = _projectFiles.Count > 0;
@@ -1105,7 +1115,7 @@ namespace BlendHub.Controls
 
                 var emptyText = new TextBlock { Text = "No custom launchers configured. Click 'Add File' to add external files/launchers.", Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorTertiaryBrush"], HorizontalAlignment = HorizontalAlignment.Center, FontSize = 13, Margin = new Thickness(0, 40, 0, 40) };
                 var noResultsText = new TextBlock { Text = "No results found.", Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorTertiaryBrush"], HorizontalAlignment = HorizontalAlignment.Center, FontSize = 13, Margin = new Thickness(0, 40, 0, 40), Visibility = Visibility.Collapsed };
-                
+
                 _customLaunchers.CollectionChanged += (s, e) =>
                 {
                     bool hasAllItems = _allCustomLaunchers.Count > 0;
@@ -1116,7 +1126,7 @@ namespace BlendHub.Controls
                     emptyText.Visibility = (!hasAllItems) ? Visibility.Visible : Visibility.Collapsed;
                     noResultsText.Visibility = (hasAllItems && !hasItems) ? Visibility.Visible : Visibility.Collapsed;
                 };
-                
+
                 // Initial visibility setup
                 bool initialHasAllItems = _allCustomLaunchers.Count > 0;
                 bool initialHasItems = _customLaunchers.Count > 0;
@@ -1138,6 +1148,188 @@ namespace BlendHub.Controls
             FilterCustomLaunchers();
 
             return _launchersPanel;
+        }
+
+        private void FolderHeader_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is FolderViewModel vm)
+            {
+                vm.IsExpanded = !vm.IsExpanded;
+            }
+        }
+
+        private void FileItem_DoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is FileViewModel vm)
+            {
+                if (File.Exists(vm.FullPath)) Process.Start(new ProcessStartInfo { FileName = vm.FullPath, UseShellExecute = true });
+                else if (Directory.Exists(vm.FullPath)) Process.Start("explorer.exe", vm.FullPath);
+            }
+        }
+
+        private void OpenFile_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuFlyoutItem item && item.Tag is string fullPath)
+            {
+                if (File.Exists(fullPath)) Process.Start(new ProcessStartInfo { FileName = fullPath, UseShellExecute = true });
+            }
+        }
+
+        private void OpenContainingFolder_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuFlyoutItem item && item.Tag is string fullPath)
+            {
+                if (File.Exists(fullPath)) Process.Start("explorer.exe", $"/select,\"{fullPath}\"");
+                else if (Directory.Exists(fullPath)) Process.Start("explorer.exe", fullPath);
+            }
+        }
+
+        private async void DeleteFile_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuFlyoutItem item && item.Tag is string fullPath)
+            {
+                var dialog = new BlendHub.Dialogs.DeleteFileDialog(Path.GetFileName(fullPath)) { XamlRoot = this.XamlRoot };
+
+                if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+                {
+                    try
+                    {
+                        if (File.Exists(fullPath)) File.Delete(fullPath);
+                        else if (Directory.Exists(fullPath)) Directory.Delete(fullPath, true);
+
+                        _locationsPanel = null;
+                        _allLocationFolders.Clear();
+                        _locationFolders.Clear();
+                        LoadTabContent(0);
+                    }
+                    catch (Exception ex)
+                    {
+                        var errorDialog = new BlendHub.Dialogs.ErrorDialog($"Could not delete item: {ex.Message}") { XamlRoot = this.XamlRoot };
+                        await errorDialog.ShowAsync();
+                    }
+                }
+            }
+        }
+
+        private void RefreshLocations_Click(object sender, RoutedEventArgs e)
+        {
+            if (Project == null || !Directory.Exists(Project.Path)) return;
+
+            var diskFolders = Directory.GetDirectories(Project.Path)
+                .Select(d => Path.GetFileName(d))
+                .OrderBy(n => n)
+                .ToList();
+
+            Project.Subfolders = diskFolders;
+            ProjectService.UpdateProject(Project);
+
+            _locationsPanel = null;
+            _allLocationFolders.Clear();
+            _locationFolders.Clear();
+
+            int selectedIndex = ContentSelectorBar.Items.IndexOf(ContentSelectorBar.SelectedItem);
+            LoadTabContent(selectedIndex);
+        }
+
+        private int GetFolderItemCount(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path))
+                {
+                    return new DirectoryInfo(path).GetFileSystemInfos().Length;
+                }
+            }
+            catch { }
+            return 0;
+        }
+
+        private UIElement GetLocationsPanel()
+        {
+            if (Project == null) return new Grid();
+
+            if (_locationsPanel == null)
+            {
+                if (Project.Subfolders.Count > 0)
+                {
+                    _allLocationFolders.Clear();
+                    _locationFolders.Clear();
+
+                    foreach (var f in Project.Subfolders)
+                    {
+                        string fullPath = Path.Combine(Project.Path, f);
+                        var folderVm = new FolderViewModel(f, fullPath, GetFolderItemCount(fullPath))
+                        {
+                            IsExpanded = AppSettingsService.Instance.Settings.ExpandFoldersByDefault
+                        };
+
+                        _allLocationFolders.Add(folderVm);
+                        _locationFolders.Add(folderVm);
+                    }
+
+                    var repeater = new ItemsRepeater
+                    {
+                        ItemsSource = _locationFolders,
+                        ItemTemplate = (DataTemplate)Resources["FolderTemplate"],
+                        Layout = new StackLayout { Spacing = 4 },
+                        Margin = new Thickness(0, 0, 0, 0)
+                    };
+                    _locationsPanel = repeater;
+                }
+                else
+                {
+                    _locationsPanel = new TextBlock
+                    {
+                        Text = "No subfolders configured",
+                        Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(0, 40, 0, 40)
+                    };
+                }
+            }
+
+            FilterLocations();
+
+            return _locationsPanel;
+        }
+
+        private void FilterLocations()
+        {
+            var query = _searchQuery.ToLowerInvariant();
+
+            foreach (var folder in _allLocationFolders)
+            {
+                folder.Filter(_searchQuery);
+            }
+
+            List<FolderViewModel> filteredFolders;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                filteredFolders = _allLocationFolders;
+            }
+            else
+            {
+                filteredFolders = _allLocationFolders.Where(folder =>
+                    folder.Name.ToLowerInvariant().Contains(query) ||
+                    folder.Subfolders.Count > 0 ||
+                    folder.FilesOnly.Count > 0
+                ).ToList();
+            }
+
+            for (int i = _locationFolders.Count - 1; i >= 0; i--)
+            {
+                if (!filteredFolders.Contains(_locationFolders[i]))
+                {
+                    _locationFolders.RemoveAt(i);
+                }
+            }
+            foreach (var folder in filteredFolders)
+            {
+                if (!_locationFolders.Contains(folder))
+                {
+                    _locationFolders.Add(folder);
+                }
+            }
         }
 
         private async Task LoadFileIconAsync(string filePath, ProjectFileViewModel vm)
@@ -1178,7 +1370,7 @@ namespace BlendHub.Controls
         {
             if (Project == null) return;
             var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.ComputerFolder }; picker.FileTypeFilter.Add("*");
-            InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.MainWindow));
+            BlendHub.Helpers.WindowHelper.InitializeWithWindow(picker);
             var files = await picker.PickMultipleFilesAsync();
             if (files != null)
             {
@@ -1229,14 +1421,14 @@ namespace BlendHub.Controls
                     }
                 }
             }
-            
+
             FilterProjectItems();
         }
 
         private bool FilterProjectItem(ProjectItemViewModel item, string query)
         {
             if (string.IsNullOrWhiteSpace(query)) return true;
-            return (item.Heading?.ToLowerInvariant().Contains(query) == true) || 
+            return (item.Heading?.ToLowerInvariant().Contains(query) == true) ||
                    (item.Content?.ToLowerInvariant().Contains(query) == true);
         }
 
@@ -1291,18 +1483,19 @@ namespace BlendHub.Controls
         private void UpdateSearchBoxVisibility()
         {
             if (GlobalSearchBox == null || ContentSelectorBar == null || ContentSelectorBar.SelectedItem == null) return;
-            
+
             int tabIndex = ContentSelectorBar.Items.IndexOf(ContentSelectorBar.SelectedItem);
             bool hasContent = false;
-            
+
             switch (tabIndex)
             {
                 case 0: hasContent = _allProjectFiles.Count > 0; break;
-                case 1: hasContent = _allItems.Count > 0; break;
-                case 2: hasContent = (_allTodoItems.Count + _allInProgressItems.Count + _allCompletedItems.Count) > 0; break;
-                case 3: hasContent = _allCustomLaunchers.Count > 0; break;
+                case 1: hasContent = _allLocationFolders.Count > 0; break;
+                case 2: hasContent = _allCustomLaunchers.Count > 0; break;
+                case 3: hasContent = _allItems.Count > 0; break;
+                case 4: hasContent = (_allTodoItems.Count + _allInProgressItems.Count + _allCompletedItems.Count) > 0; break;
             }
-            
+
             GlobalSearchBox.IsEnabled = hasContent;
         }
 
@@ -1311,9 +1504,9 @@ namespace BlendHub.Controls
             if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
             {
                 _searchQuery = sender.Text;
-                
+
                 int tabIndex = ContentSelectorBar.Items.IndexOf(ContentSelectorBar.SelectedItem);
-                if (tabIndex == 1 || tabIndex == 2)
+                if (tabIndex == 3 || tabIndex == 4)
                 {
                     FilterProjectItems();
                 }
@@ -1321,9 +1514,13 @@ namespace BlendHub.Controls
                 {
                     FilterProjectFiles();
                 }
-                else if (tabIndex == 3)
+                else if (tabIndex == 2)
                 {
                     FilterCustomLaunchers();
+                }
+                else if (tabIndex == 1)
+                {
+                    FilterLocations();
                 }
             }
         }
@@ -1331,7 +1528,7 @@ namespace BlendHub.Controls
         private async void AddProjectItem_Click(object sender, RoutedEventArgs e)
         {
             if (Project == null) return;
-            var itemType = ContentSelectorBar.Items.IndexOf(ContentSelectorBar.SelectedItem) == 2 ? ProjectItemType.Todo : ProjectItemType.Note;
+            var itemType = ContentSelectorBar.Items.IndexOf(ContentSelectorBar.SelectedItem) == 4 ? ProjectItemType.Todo : ProjectItemType.Note;
 
             var dialog = new BlendHub.Dialogs.ProjectItemDialog(itemType) { XamlRoot = this.XamlRoot };
 
@@ -1348,7 +1545,7 @@ namespace BlendHub.Controls
                 ProjectService.UpdateProject(Project); LoadProjectItems();
 
                 int selectedIndex = ContentSelectorBar.Items.IndexOf(ContentSelectorBar.SelectedItem);
-                if (selectedIndex == 1 || selectedIndex == 2) LoadTabContent(selectedIndex);
+                if (selectedIndex == 3 || selectedIndex == 4) LoadTabContent(selectedIndex);
             }
         }
 
@@ -1369,10 +1566,10 @@ namespace BlendHub.Controls
                         vm.UpdatePriority();
                     }
                     if (Project != null) ProjectService.UpdateProject(Project);
-                    
+
                     LoadProjectItems();
                     int selectedIndex = ContentSelectorBar.Items.IndexOf(ContentSelectorBar.SelectedItem);
-                    if (selectedIndex == 1 || selectedIndex == 2) LoadTabContent(selectedIndex);
+                    if (selectedIndex == 3 || selectedIndex == 4) LoadTabContent(selectedIndex);
                 }
             }
         }
@@ -1531,11 +1728,7 @@ namespace BlendHub.Controls
 
         private string FormatBytes(long bytes)
         {
-            string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
-            int counter = 0;
-            decimal number = bytes;
-            while (Math.Round(number / 1024) >= 1) { number /= 1024; counter++; }
-            return string.Format("{0:n1} {1}", number, suffixes[counter]);
+            return BlendHub.Helpers.FormatHelper.FormatBytes(bytes);
         }
 
         private void FileMenuFlyout_Opening(object sender, object e)
@@ -1569,9 +1762,9 @@ namespace BlendHub.Controls
             if (vm == null) return;
 
             // 1. Open (Default)
-            var openItem = new MenuFlyoutItem 
-            { 
-                Text = "Open", 
+            var openItem = new MenuFlyoutItem
+            {
+                Text = "Open",
                 Icon = new FontIcon { Glyph = "\uE8E5" },
                 Tag = vm
             };
@@ -1587,10 +1780,10 @@ namespace BlendHub.Controls
             // 2. Open with other versions (only for .blend files, not in Launchers tab)
             if (!isLauncherTab && vm.FullPath.EndsWith(".blend", StringComparison.OrdinalIgnoreCase))
             {
-                var openWithSub = new MenuFlyoutSubItem 
-                { 
-                    Text = "Open with...", 
-                    Icon = new FontIcon { Glyph = "\uE7AC" } 
+                var openWithSub = new MenuFlyoutSubItem
+                {
+                    Text = "Open with...",
+                    Icon = new FontIcon { Glyph = "\uE7AC" }
                 };
 
                 var versions = new BlenderSettingsService().GetInstalledVersions();
@@ -1598,8 +1791,8 @@ namespace BlendHub.Controls
                 {
                     foreach (var ver in versions)
                     {
-                        var verItem = new MenuFlyoutItem 
-                        { 
+                        var verItem = new MenuFlyoutItem
+                        {
                             Text = ver.DisplayName,
                             Tag = (vm, ver)
                         };
@@ -1628,9 +1821,9 @@ namespace BlendHub.Controls
             flyout.Items.Add(new MenuFlyoutSeparator());
 
             // 3. Open File Location
-            var locItem = new MenuFlyoutItem 
-            { 
-                Text = "Open File Location", 
+            var locItem = new MenuFlyoutItem
+            {
+                Text = "Open File Location",
                 Icon = new FontIcon { Glyph = "\uED25" },
                 Tag = vm
             };
@@ -1666,18 +1859,18 @@ namespace BlendHub.Controls
             else
             {
                 // Files tab: Rename and Delete
-                var renameItem = new MenuFlyoutItem 
-                { 
-                    Text = "Rename", 
+                var renameItem = new MenuFlyoutItem
+                {
+                    Text = "Rename",
                     Icon = new FontIcon { Glyph = "\uE8AC" },
                     Tag = vm
                 };
                 renameItem.Click += RenameFileMenu_Click;
                 flyout.Items.Add(renameItem);
 
-                var deleteItem = new MenuFlyoutItem 
-                { 
-                    Text = "Delete File", 
+                var deleteItem = new MenuFlyoutItem
+                {
+                    Text = "Delete File",
                     Icon = new FontIcon { Glyph = "\uE74D" },
                     Tag = vm,
                     Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemFillColorCriticalBrush"]

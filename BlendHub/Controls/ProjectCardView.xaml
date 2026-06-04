@@ -12,6 +12,192 @@
 
     <UserControl.Resources>
         <!-- ========================================
+		     FOLDER HEADER TEMPLATE
+		     ======================================== -->
+        <DataTemplate x:Key="FolderHeaderTemplate" x:DataType="models:FolderViewModel">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="24" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Expand/Collapse Icon -->
+                <FontIcon Glyph="{x:Bind ExpandIcon, Mode=OneWay}"
+                          FontSize="10"
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+
+                <!-- Folder Icon -->
+                <Image Grid.Column="1"
+                       Source="{x:Bind FolderIcon, Mode=OneWay}"
+                       Width="20"
+                       Height="20"
+                       VerticalAlignment="Center" />
+
+                <!-- Folder Name -->
+                <TextBlock Grid.Column="2"
+                           Text="{x:Bind Name}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+
+                <!-- Item Count -->
+                <TextBlock Grid.Column="3"
+                           Text="{x:Bind ItemCountText}"
+                           FontSize="12"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0" />
+            </Grid>
+        </DataTemplate>
+
+        <!-- ========================================
+		     FILE TEMPLATE
+		     ======================================== -->
+        <DataTemplate x:Key="FileTemplate"
+                      x:DataType="models:FileViewModel">
+            <Grid Padding="0,4"
+                  DoubleTapped="FileItem_DoubleTapped"
+                  Background="Transparent"
+                  AutomationProperties.Name="{x:Bind Name}">
+                <Grid.ContextFlyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem Text="Open File"
+                                        Click="OpenFile_Click"
+                                        Tag="{x:Bind FullPath}">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE8A7;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Open Folder"
+                                        Click="OpenContainingFolder_Click"
+                                        Tag="{x:Bind FullPath}">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE8DA;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Delete"
+                                        Click="DeleteFile_Click"
+                                        Tag="{x:Bind FullPath}"
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE74D;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Grid.ContextFlyout>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="200" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="20" Height="20" Margin="0,0,12,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image Source="{x:Bind IconSource, Mode=OneWay}"
+                           Stretch="Uniform"
+                           Visibility="{x:Bind IconVisibility, Mode=OneWay}" />
+                    <FontIcon Glyph="&#xE8A5;"
+                              FontSize="16"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                              Visibility="{x:Bind FallbackIconVisibility, Mode=OneWay}" />
+                </Grid>
+                <TextBlock Grid.Column="1"
+                           Text="{x:Bind Name}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="2"
+                           Text="{x:Bind ModifiedDateText}"
+                           FontSize="13"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           VerticalAlignment="Center"
+                           Margin="12,0"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="3"
+                           Text="{x:Bind SizeText}"
+                           FontSize="13"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
+                           TextTrimming="CharacterEllipsis" />
+            </Grid>
+        </DataTemplate>
+
+        <!-- ========================================
+		     FOLDER TEMPLATE
+		     ======================================== -->
+        <DataTemplate x:Key="FolderTemplate"
+                      x:DataType="models:FolderViewModel">
+            <StackPanel Margin="0">
+                <Button Click="FolderHeader_Click"
+                        Tag="{x:Bind}"
+                        Style="{StaticResource SubtleButtonStyle}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        Content="{x:Bind}"
+                        ContentTemplate="{StaticResource FolderHeaderTemplate}"
+                        Padding="8,6">
+                    <Button.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="Open Folder"
+                                            Click="OpenContainingFolder_Click"
+                                            Tag="{x:Bind FullPath}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE8DA;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="Delete"
+                                            Click="DeleteFile_Click"
+                                            Tag="{x:Bind FullPath}"
+                                            Foreground="{ThemeResource SystemFillColorCriticalBrush}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE74D;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </Button.ContextFlyout>
+                </Button>
+
+                <ItemsControl ItemsSource="{x:Bind Subfolders}"
+                              Visibility="{x:Bind ContentVisibility, Mode=OneWay}"
+                              Padding="24,0,0,0"
+                              Margin="24,4,0,0"
+                              HorizontalContentAlignment="Stretch">
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="HorizontalAlignment" Value="Stretch" />
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ContentControl Content="{Binding}"
+                                            ContentTemplate="{StaticResource FolderTemplate}"
+                                            HorizontalContentAlignment="Stretch"
+                                            HorizontalAlignment="Stretch" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ListView ItemsSource="{x:Bind FilesOnly}"
+                          ItemTemplate="{StaticResource FileTemplate}"
+                          SelectionMode="Single"
+                          IsItemClickEnabled="True"
+                          Visibility="{x:Bind ContentVisibility, Mode=OneWay}"
+                          Padding="24,0,0,0"
+                          Margin="0"
+                          BorderThickness="0"
+                          ToolTipService.ToolTip="Double-click any file to open it directly. Right-click or use the actions button for more options!">
+                </ListView>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- ========================================
 		     NOTE TEMPLATE
 		     ======================================== -->
         <DataTemplate x:Key="NoteTemplate">
@@ -65,7 +251,7 @@
 		     PROJECT FILE CARD TEMPLATE
 		     ======================================== -->
         <DataTemplate x:Key="ProjectFileTemplate">
-            <Grid Margin="0,6,0,6" AutomationProperties.Name="{Binding Name}" DoubleTapped="ProjectFileItem_DoubleTapped" Background="Transparent" HorizontalAlignment="Stretch"
+            <Grid Padding="0,2" AutomationProperties.Name="{Binding Name}" DoubleTapped="ProjectFileItem_DoubleTapped" Background="Transparent" HorizontalAlignment="Stretch"
                   ToolTipService.ToolTip="Double-click any file to open it directly. Right-click or use the actions button for more options!">
                 <Grid.ContextFlyout>
                     <MenuFlyout Opening="FileMenuFlyout_Opening" />
@@ -123,7 +309,7 @@
 		     LAUNCHER FILE CARD TEMPLATE (no Blender Version column)
 		     ======================================== -->
         <DataTemplate x:Key="LauncherFileTemplate">
-            <Grid Margin="0,6,0,6" AutomationProperties.Name="{Binding Name}" Tag="Launcher" DoubleTapped="ProjectFileItem_DoubleTapped" Background="Transparent" HorizontalAlignment="Stretch"
+            <Grid Padding="0,2" AutomationProperties.Name="{Binding Name}" Tag="Launcher" DoubleTapped="ProjectFileItem_DoubleTapped" Background="Transparent" HorizontalAlignment="Stretch"
                   ToolTipService.ToolTip="Double-click any file to open it directly. Right-click or use the actions button for more options!">
                 <Grid.ContextFlyout>
                     <MenuFlyout Opening="FileMenuFlyout_Opening" />
@@ -257,6 +443,7 @@
     <Expander x:Name="CardExpander"
               MinHeight="74"
               Margin="0,0,0,6"
+              CornerRadius="6"
               Opacity="{x:Bind models:Project.GetOpacity(Project.FolderExists)}"
               HorizontalAlignment="Stretch"
               HorizontalContentAlignment="Stretch">
@@ -349,11 +536,29 @@
                     <toolkit:Segmented x:Name="ContentSelectorBar"
                                        HorizontalAlignment="Left"
                                        VerticalAlignment="Center"
+                                       MinHeight="32"
                                        SelectionChanged="ContentSelectorBar_SelectionChanged">
+                        <toolkit:Segmented.Resources>
+                            <Style TargetType="toolkit:SegmentedItem">
+                                <Setter Property="MinHeight" Value="32" />
+                            </Style>
+                        </toolkit:Segmented.Resources>
                         <toolkit:SegmentedItem x:Name="FilesTab" Tag="Projects">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <FontIcon Glyph="&#xF158;" FontSize="14" />
                                 <TextBlock x:Name="FilesTabText" Text="Projects" />
+                            </StackPanel>
+                        </toolkit:SegmentedItem>
+                        <toolkit:SegmentedItem x:Name="DirectoriesTab" Tag="Directories">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8B7;" FontSize="14" />
+                                <TextBlock x:Name="DirectoriesTabText" Text="Directories" />
+                            </StackPanel>
+                        </toolkit:SegmentedItem>
+                        <toolkit:SegmentedItem x:Name="LaunchersTab" Tag="Launchers">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE7C3;" FontSize="14" />
+                                <TextBlock x:Name="LaunchersTabText" Text="Launchers" />
                             </StackPanel>
                         </toolkit:SegmentedItem>
                         <toolkit:SegmentedItem x:Name="NotesTab" Tag="Notes">
@@ -366,12 +571,6 @@
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <FontIcon Glyph="&#xF7EC;" FontSize="14" />
                                 <TextBlock x:Name="TasksTabText" Text="Tasks" />
-                            </StackPanel>
-                        </toolkit:SegmentedItem>
-                        <toolkit:SegmentedItem x:Name="LaunchersTab" Tag="Launchers">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon Glyph="&#xE7C3;" FontSize="14" />
-                                <TextBlock x:Name="LaunchersTabText" Text="Launchers" />
                             </StackPanel>
                         </toolkit:SegmentedItem>
                     </toolkit:Segmented>
@@ -411,6 +610,18 @@
                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                 <FontIcon Glyph="&#xE710;" FontSize="12" VerticalAlignment="Center" />
                                 <TextBlock Text="Add File" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="RefreshDirectoriesBtn"
+                                Visibility="Collapsed"
+                                Click="RefreshLocations_Click"
+                                Height="32"
+                                VerticalAlignment="Center"
+                                Padding="12,0"
+                                MinWidth="100">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE72C;" FontSize="12" VerticalAlignment="Center" />
+                                <TextBlock Text="Refresh" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
                     </StackPanel>

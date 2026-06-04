@@ -379,7 +379,7 @@ namespace BlendHub.Pages
         {
             var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.ComputerFolder };
             picker.FileTypeFilter.Add(".blend");
-            InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.MainWindow));
+            BlendHub.Helpers.WindowHelper.InitializeWithWindow(picker);
             var file = await picker.PickSingleFileAsync();
             if (file != null) await ProcessDroppedFolderAsync(await file.GetParentAsync());
         }

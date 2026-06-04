@@ -42,7 +42,7 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- Create New Project -->
-                        <Button Grid.Column="0" HorizontalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="CreateProjectQuickAction_Click">
+                        <Button Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="CreateProjectQuickAction_Click">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
                                 <Grid Width="44" Height="44" HorizontalAlignment="Center">
                                     <Border CornerRadius="22" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
@@ -54,7 +54,7 @@
                         </Button>
 
                         <!-- Reference Board -->
-                        <Button Grid.Column="1" HorizontalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="ReferenceBoardQuickAction_Click">
+                        <Button Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="ReferenceBoardQuickAction_Click">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
                                 <Grid Width="44" Height="44" HorizontalAlignment="Center">
                                     <Border CornerRadius="22" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
@@ -66,7 +66,7 @@
                         </Button>
 
                         <!-- Manage Addons -->
-                        <Button Grid.Column="2" HorizontalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="ManageAddonsQuickAction_Click">
+                        <Button Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="ManageAddonsQuickAction_Click">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
                                 <Grid Width="44" Height="44" HorizontalAlignment="Center">
                                     <Border CornerRadius="22" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
@@ -78,7 +78,7 @@
                         </Button>
 
                         <!-- Download Blender -->
-                        <Button Grid.Column="3" HorizontalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="DownloadBlenderQuickAction_Click">
+                        <Button Grid.Column="3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="DownloadBlenderQuickAction_Click">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
                                 <Grid Width="44" Height="44" HorizontalAlignment="Center">
                                     <Border CornerRadius="22" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
@@ -90,7 +90,7 @@
                         </Button>
 
                         <!-- Create Backup -->
-                        <Button Grid.Column="4" HorizontalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="CreateBackupQuickAction_Click">
+                        <Button Grid.Column="4" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="12,18" MinHeight="132" CornerRadius="8" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Click="CreateBackupQuickAction_Click">
                             <StackPanel Spacing="6" HorizontalAlignment="Center">
                                 <Grid Width="44" Height="44" HorizontalAlignment="Center">
                                     <Border CornerRadius="22" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
@@ -103,8 +103,8 @@
                     </Grid>
                 </StackPanel>
 
-                <!-- Installed Versions (Microsoft Store Style) -->
-                <Border CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                <!-- Installed Versions -->
+                <Border CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                     <StackPanel>
                         <!-- Container Header -->
                         <Grid ColumnDefinitions="*, Auto" Padding="16,14,16,14">
@@ -137,7 +137,7 @@
                                     <StackPanel>
                                         <Grid ColumnDefinitions="Auto, *, Auto" Padding="16,16,16,16">
                                             <!-- Column 0: Logo -->
-                                            <Image Grid.Column="0" Source="/Assets/blender_logo.png" Width="32" Height="32" Margin="0,0,16,0" VerticalAlignment="Center" />
+                                            <Image Grid.Column="0" Source="/Assets/blender_logo.png" Width="24" Height="24" Margin="0,0,16,0" VerticalAlignment="Center" />
 
                                             <!-- Column 1: Info -->
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
@@ -155,18 +155,9 @@
                                                     </StackPanel>
                                                 </Button>
 
-                                                <!-- Ellipsis Options -->
-                                                <Button Style="{StaticResource DefaultButtonStyle}" Width="32" Height="32" Padding="0">
-                                                    <FontIcon Glyph="&#xE712;" FontSize="12" />
-                                                    <Button.Flyout>
-                                                        <MenuFlyout Placement="Bottom">
-                                                            <MenuFlyoutItem Text="Open Config Folder" Click="OpenConfigFolder_Click" DataContext="{Binding}">
-                                                                <MenuFlyoutItem.Icon>
-                                                                    <FontIcon Glyph="&#xED25;" />
-                                                                </MenuFlyoutItem.Icon>
-                                                            </MenuFlyoutItem>
-                                                        </MenuFlyout>
-                                                    </Button.Flyout>
+                                                <!-- Open Config Folder Button -->
+                                                <Button Click="OpenConfigFolder_Click" DataContext="{Binding}" Style="{StaticResource DefaultButtonStyle}" Width="32" Height="32" Padding="0" ToolTipService.ToolTip="Open Config Folder">
+                                                    <FontIcon Glyph="&#xEC25;" FontSize="14" />
                                                 </Button>
                                             </StackPanel>
                                         </Grid>

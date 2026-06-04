@@ -1,4 +1,3 @@
-using BlendHub.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -34,7 +33,7 @@ namespace BlendHub.Models
                 OnPropertyChanged(nameof(Status));
             }
         }
-        
+
         public TodoStatus Status
         {
             get => Item.Status;
@@ -48,7 +47,7 @@ namespace BlendHub.Models
             }
         }
         public string CreatedAtString => Item.CreatedAt.ToString("g");
-        
+
         public string DueDateString => Item.DueDate?.ToString("d (ddd)") ?? "";
         public Microsoft.UI.Xaml.Visibility DueDateVisibility => Item.DueDate.HasValue ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
         public Windows.UI.Text.TextDecorations TextDecoration => IsCompleted ? Windows.UI.Text.TextDecorations.Strikethrough : Windows.UI.Text.TextDecorations.None;
@@ -106,6 +105,36 @@ namespace BlendHub.Models
         }
     }
 
+    public class TreeViewTemplateSelector : DataTemplateSelector
+    {
+        public DataTemplate? FolderTemplate { get; set; }
+        public DataTemplate? FileTemplate { get; set; }
+
+        protected override DataTemplate? SelectTemplateCore(object item)
+        {
+            if (item is FolderViewModel) return FolderTemplate;
+            if (item is FileViewModel) return FileTemplate;
+            if (item is TreeViewNode node)
+            {
+                if (node.Content is FolderViewModel) return FolderTemplate;
+                if (node.Content is FileViewModel) return FileTemplate;
+            }
+            return base.SelectTemplateCore(item);
+        }
+
+        protected override DataTemplate? SelectTemplateCore(object item, DependencyObject container)
+        {
+            if (item is FolderViewModel) return FolderTemplate;
+            if (item is FileViewModel) return FileTemplate;
+            if (item is TreeViewNode node)
+            {
+                if (node.Content is FolderViewModel) return FolderTemplate;
+                if (node.Content is FileViewModel) return FileTemplate;
+            }
+            return base.SelectTemplateCore(item, container);
+        }
+    }
+
     public abstract class FileSystemItemViewModel : INotifyPropertyChanged
     {
         public string Name { get; set; } = string.Empty;
@@ -122,10 +151,10 @@ namespace BlendHub.Models
         public Microsoft.UI.Xaml.Media.ImageSource? IconSource
         {
             get => _iconSource;
-            set 
-            { 
-                _iconSource = value; 
-                OnPropertyChanged(nameof(IconSource)); 
+            set
+            {
+                _iconSource = value;
+                OnPropertyChanged(nameof(IconSource));
                 OnPropertyChanged(nameof(IconVisibility));
                 OnPropertyChanged(nameof(FallbackIconVisibility));
             }
@@ -178,6 +207,7 @@ namespace BlendHub.Models
 
         public System.Collections.ObjectModel.ObservableCollection<FolderViewModel> Subfolders { get; set; } = new();
         public System.Collections.ObjectModel.ObservableCollection<FileViewModel> FilesOnly { get; set; } = new();
+        public System.Collections.ObjectModel.ObservableCollection<FileSystemItemViewModel> Children { get; } = new();
 
         private List<FileViewModel> _allFilesOnly = new();
         private List<FolderViewModel> _allSubfolders = new();
@@ -188,8 +218,22 @@ namespace BlendHub.Models
             FullPath = path;
             Path = path;
             ItemCount = itemCount;
-            Subfolders.CollectionChanged += (s, e) => OnPropertyChanged(nameof(EmptyVisibility));
-            FilesOnly.CollectionChanged += (s, e) => OnPropertyChanged(nameof(EmptyVisibility));
+            
+            Subfolders.CollectionChanged += (s, e) => {
+                OnPropertyChanged(nameof(EmptyVisibility));
+                SyncChildren();
+            };
+            FilesOnly.CollectionChanged += (s, e) => {
+                OnPropertyChanged(nameof(EmptyVisibility));
+                SyncChildren();
+            };
+        }
+
+        private void SyncChildren()
+        {
+            Children.Clear();
+            foreach (var sub in Subfolders) Children.Add(sub);
+            foreach (var file in FilesOnly) Children.Add(file);
         }
 
         public bool Filter(string? query, bool parentMatched = false)
@@ -216,15 +260,15 @@ namespace BlendHub.Models
                 return true;
             }
 
-            var filteredSubfolders = _allSubfolders.Where(sub => 
-                isFolderNameMatch || 
-                sub.Name.ToLowerInvariant().Contains(queryLower) || 
-                sub.Subfolders.Count > 0 || 
+            var filteredSubfolders = _allSubfolders.Where(sub =>
+                isFolderNameMatch ||
+                sub.Name.ToLowerInvariant().Contains(queryLower) ||
+                sub.Subfolders.Count > 0 ||
                 sub.FilesOnly.Count > 0
             ).ToList();
 
-            var filteredFiles = _allFilesOnly.Where(file => 
-                isFolderNameMatch || 
+            var filteredFiles = _allFilesOnly.Where(file =>
+                isFolderNameMatch ||
                 file.Name.ToLowerInvariant().Contains(queryLower)
             ).ToList();
 
@@ -392,18 +436,18 @@ namespace BlendHub.Models
         public Microsoft.UI.Xaml.Media.ImageSource? IconSource
         {
             get => _iconSource;
-            set 
-            { 
-                _iconSource = value; 
-                OnPropertyChanged(nameof(IconSource)); 
-                OnPropertyChanged(nameof(IconVisibility)); 
-                OnPropertyChanged(nameof(FallbackIconVisibility)); 
+            set
+            {
+                _iconSource = value;
+                OnPropertyChanged(nameof(IconSource));
+                OnPropertyChanged(nameof(IconVisibility));
+                OnPropertyChanged(nameof(FallbackIconVisibility));
             }
         }
 
         public Project? Project { get; set; }
 
-        public Microsoft.UI.Xaml.Visibility BlendFileLaunchVisibility => 
+        public Microsoft.UI.Xaml.Visibility BlendFileLaunchVisibility =>
             FullPath.EndsWith(".blend", StringComparison.OrdinalIgnoreCase) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
 
         public Microsoft.UI.Xaml.Visibility IconVisibility => _iconSource != null ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;

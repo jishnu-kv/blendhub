@@ -18,6 +18,7 @@ namespace BlendHub.Models
         public string Version { get; set; } = string.Empty;
         public string ShortVersion { get; set; } = string.Empty;
         public string ReleaseDate { get; set; } = string.Empty;
+        public string LastUpdatedText => $"Last updated: {ReleaseDate}";
         public Visibility IsLatest { get; set; } = Visibility.Collapsed;
         public string InstallersCountText { get; set; } = string.Empty;
 

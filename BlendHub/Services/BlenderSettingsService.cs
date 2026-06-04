@@ -37,19 +37,31 @@ namespace BlendHub.Services
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Blender Foundation", "Blender");
         }
 
-        public List<BlenderVersionInfo> GetInstalledVersions()
+        public List<BlenderVersionInfo> GetInstalledVersions(bool includeHidden = false)
         {
             var versions = new List<BlenderVersionInfo>();
             var configRoot = GetBlenderRootPath();
             var discoveredVersions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // version -> executablePath
 
-            var searchPaths = new[]
+            var searchPaths = new List<string>
             {
                 @"C:\Program Files\Blender Foundation",
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Steam\steamapps\common\Blender"),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Microsoft\WindowsApps"),
                 @"C:\Program Files\WindowsApps"
             };
+
+            var customScanFolders = AppSettingsService.Instance.Settings.CustomScanFolders;
+            if (customScanFolders != null)
+            {
+                foreach (var folder in customScanFolders)
+                {
+                    if (!string.IsNullOrEmpty(folder) && !searchPaths.Contains(folder))
+                    {
+                        searchPaths.Add(folder);
+                    }
+                }
+            }
 
             // Phase 1: Discover versions from installation directories
             foreach (var root in searchPaths)
@@ -58,22 +70,49 @@ namespace BlendHub.Services
 
                 try
                 {
-                    if (root.EndsWith("Blender Foundation", StringComparison.OrdinalIgnoreCase))
+                    bool isCustomScanFolder = customScanFolders != null && customScanFolders.Contains(root);
+                    if (root.EndsWith("Blender Foundation", StringComparison.OrdinalIgnoreCase) || isCustomScanFolder)
                     {
-                        // Standard installation: "C:\Program Files\Blender Foundation\Blender 4.2\blender.exe"
+                        // Standard installation or custom scan folder: scan subdirectories
                         foreach (var dir in Directory.GetDirectories(root))
                         {
                             try
                             {
                                 var dirName = Path.GetFileName(dir);
                                 var versionStr = ExtractVersionFromName(dirName);
-                                if (string.IsNullOrEmpty(versionStr)) continue;
 
                                 var exe = Path.Combine(dir, "blender.exe");
                                 if (!File.Exists(exe)) exe = Path.Combine(dir, "blender-launcher.exe");
-                                if (File.Exists(exe) && !discoveredVersions.ContainsKey(versionStr))
+                                if (File.Exists(exe))
                                 {
-                                    discoveredVersions[versionStr] = exe;
+                                    if (string.IsNullOrEmpty(versionStr))
+                                    {
+                                        try
+                                        {
+                                            var vi = System.Diagnostics.FileVersionInfo.GetVersionInfo(exe);
+                                            var ver = vi.ProductVersion ?? vi.FileVersion;
+                                            versionStr = ExtractMajorMinor(ver);
+                                        }
+                                        catch { }
+                                    }
+                                    if (string.IsNullOrEmpty(versionStr)) versionStr = "Custom";
+
+                                    if (!discoveredVersions.ContainsKey(versionStr))
+                                    {
+                                        discoveredVersions[versionStr] = exe;
+                                    }
+                                    else
+                                    {
+                                        string uniqueKey = versionStr;
+                                        int suffix = 1;
+                                        while (discoveredVersions.ContainsKey(uniqueKey))
+                                        {
+                                            if (discoveredVersions[uniqueKey].Equals(exe, StringComparison.OrdinalIgnoreCase))
+                                                break;
+                                            uniqueKey = $"{versionStr} ({suffix++})";
+                                        }
+                                        discoveredVersions[uniqueKey] = exe;
+                                    }
                                 }
                             }
                             catch { }
@@ -239,9 +278,6 @@ namespace BlendHub.Services
                 }
             }
 
-
-
-
             // Add custom blender paths from settings if they exist and are not already in the list
             var customPaths = AppSettingsService.Instance.Settings.CustomBlenderPaths;
             if (customPaths != null)
@@ -263,6 +299,12 @@ namespace BlendHub.Services
                 }
             }
 
+            // Filter out hidden versions if not included
+            if (!includeHidden && AppSettingsService.Instance.Settings.HiddenBlenderPaths != null)
+            {
+                versions = versions.Where(v => !AppSettingsService.Instance.Settings.HiddenBlenderPaths.Contains(v.ExecutablePath)).ToList();
+            }
+
             var sortedVersions = versions.OrderByDescending(v => v.Version).ToList();
             for (int i = 0; i < sortedVersions.Count; i++)
             {
@@ -275,9 +317,17 @@ namespace BlendHub.Services
         {
             if (File.Exists(exePath))
             {
+                string arguments = string.Empty;
+                if (AppSettingsService.Instance.Settings.BlenderLaunchArgs != null &&
+                    AppSettingsService.Instance.Settings.BlenderLaunchArgs.TryGetValue(exePath, out var args))
+                {
+                    arguments = args;
+                }
+
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = exePath,
+                    Arguments = arguments,
                     UseShellExecute = true
                 });
             }

@@ -162,7 +162,7 @@ namespace BlendHub.Pages
 
         private void OpenConfigFolder_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is MenuFlyoutItem item && item.DataContext is BlenderVersionInfo info)
+            if (sender is FrameworkElement element && element.DataContext is BlenderVersionInfo info)
             {
                 try
                 {

@@ -495,11 +495,7 @@ namespace BlendHub.Dialogs
 
         private string FormatBytes(long bytes)
         {
-            string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
-            int counter = 0;
-            decimal number = bytes;
-            while (Math.Round(number / 1024) >= 1) { number /= 1024; counter++; }
-            return string.Format("{0:n1} {1}", number, suffixes[counter]);
+            return BlendHub.Helpers.FormatHelper.FormatBytes(bytes);
         }
 
         private void DownloadDialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)

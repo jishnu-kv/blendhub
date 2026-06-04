@@ -17,10 +17,18 @@ namespace BlendHub.Services
         public bool ExpandFoldersByDefault { get; set; } = false;
         public bool FilterNestedBlendFiles { get; set; } = false;
         public System.Collections.Generic.List<string> CustomBlenderPaths { get; set; } = new System.Collections.Generic.List<string>();
+        public System.Collections.Generic.List<string> HiddenBlenderPaths { get; set; } = new System.Collections.Generic.List<string>();
+        public System.Collections.Generic.List<string> CustomScanFolders { get; set; } = new System.Collections.Generic.List<string>();
+        public System.Collections.Generic.Dictionary<string, string> BlenderLaunchArgs { get; set; } = new System.Collections.Generic.Dictionary<string, string>();
         public System.Collections.Generic.List<string> DefaultFolders { get; set; } = new System.Collections.Generic.List<string>
         {
             "Scenes", "Assets", "Images", "Source Images", "Hdri", "Clip", "Sound", "Scripts", "Movies"
         };
+        public System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>> ProjectPresets { get; set; } = new()
+        {
+            { "Default", new() { "Scenes", "Assets", "Images", "Source Images", "Hdri", "Clip", "Sound", "Scripts", "Movies" } }
+        };
+        public string SelectedPreset { get; set; } = "Default";
         public System.Collections.Generic.Dictionary<string, string> DefaultLaunchers { get; set; } = new System.Collections.Generic.Dictionary<string, string>();
     }
 
@@ -61,6 +69,16 @@ namespace BlendHub.Services
                     if (data != null)
                     {
                         Settings = data;
+
+                        // Migrate or initialize project presets
+                        if (Settings.ProjectPresets == null || Settings.ProjectPresets.Count == 0)
+                        {
+                            Settings.ProjectPresets = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>>
+                            {
+                                { "Default", Settings.DefaultFolders ?? new System.Collections.Generic.List<string> { "Scenes", "Assets", "Images", "Source Images", "Hdri", "Clip", "Sound", "Scripts", "Movies" } }
+                            };
+                            Settings.SelectedPreset = "Default";
+                        }
                     }
                 }
             }

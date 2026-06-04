@@ -26,6 +26,17 @@ namespace BlendHub.ReferenceBoard
 
             CanvasContainer.AddHandler(PointerPressedEvent, new PointerEventHandler(Canvas_PointerPressed), true);
             CanvasContainer.AddHandler(PointerWheelChangedEvent, new PointerEventHandler(CanvasContainer_PointerWheelChanged), true);
+            CanvasContainer.AddHandler(PointerMovedEvent, new PointerEventHandler(CanvasContainer_PointerMoved), true);
+        }
+
+        private void CanvasContainer_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            var ptr = e.GetCurrentPoint(InfiniteCanvasArea);
+            _currentMouseCanvasPosition = ptr.Position;
+            if (CursorPosText != null)
+            {
+                CursorPosText.Text = $"{(int)Math.Round(ptr.Position.X)}, {(int)Math.Round(ptr.Position.Y)} px";
+            }
         }
         
         private void CanvasContainer_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -508,12 +519,6 @@ namespace BlendHub.ReferenceBoard
                 
                 _lastPointerPosition = pointerPoint.Position;
                 e.Handled = true;
-            }
-
-            _currentMouseCanvasPosition = ptr.Position;
-            if (CursorPosText != null)
-            {
-                CursorPosText.Text = $"{(int)Math.Round(ptr.Position.X)}, {(int)Math.Round(ptr.Position.Y)} px";
             }
         }
 

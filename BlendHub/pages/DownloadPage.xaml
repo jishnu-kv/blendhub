@@ -37,17 +37,6 @@
             </Grid>
             
             <Grid Padding="0">
-                <Grid x:Name="LoadingPanel" Visibility="Collapsed" ColumnSpacing="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <ProgressRing Grid.Column="0" Width="16" Height="16" IsActive="True"/>
-                    <TextBlock x:Name="LoadingText" Grid.Column="1" Text="Loading versions..." 
-                               Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                </Grid>
-
                 <InfoBar x:Name="ErrorInfoBar"
                          IsOpen="False"
                          Title="Error"
@@ -87,17 +76,15 @@
                                 ToolTipService.ToolTip="Refresh"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center">
-                            <FontIcon x:Name="RefreshButtonIcon" Glyph="&#xE72C;" FontSize="14" />
+                            <Grid>
+                                <FontIcon x:Name="RefreshButtonIcon" Glyph="&#xE72C;" FontSize="14" />
+                                <ProgressRing x:Name="RefreshProgressRing"
+                                              Width="16"
+                                              Height="16"
+                                              Visibility="Collapsed"
+                                              IsActive="True"/>
+                            </Grid>
                         </Button>
-                        <ProgressRing x:Name="RefreshProgressRing"
-                                      Grid.Column="1"
-                                      Width="20"
-                                      Height="20"
-                                      Margin="12,0,0,0"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      Visibility="Collapsed"
-                                      IsActive="True"/>
                     </Grid>
                     
                     <!-- Right side: Sort Menu -->
@@ -168,12 +155,12 @@
                     <controls:SettingsCard 
                         Margin="0,0,0,6"
                         Header="{x:Bind ShortVersion}"
-                        Description="{x:Bind ReleaseDate}"
+                        Description="{x:Bind LastUpdatedText}"
                         Padding="16"
                         IsActionIconVisible="False"
                         IsClickEnabled="True"
                         Click="SettingsCard_Click"
-                        CornerRadius="4"
+                        CornerRadius="6"
                         DataContext="{x:Bind}">
                         <controls:SettingsCard.HeaderIcon>
                             <ImageIcon Source="/Assets/blender_logo.png"/>

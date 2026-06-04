@@ -102,6 +102,11 @@
                                FontSize="12" 
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
+                    <ComboBox x:Name="PresetComboBox"
+                              Header="Preset"
+                              HorizontalAlignment="Stretch"
+                              SelectionChanged="PresetComboBox_SelectionChanged" />
+
                     <ItemsControl x:Name="FolderNamesItemsControl">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:ProjectFolder">

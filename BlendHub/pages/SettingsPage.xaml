@@ -112,6 +112,12 @@
                                          HeaderIcon="{ui:FontIcon Glyph=&#xF168;}"
                                          IsExpanded="False"
                                          ItemsSource="{x:Bind DefaultFolders}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ComboBox x:Name="PresetComboBox" Width="150" SelectionChanged="PresetComboBox_SelectionChanged" />
+                        <Button x:Name="AddPresetBtn" Click="AddPresetBtn_Click" Content="&#xE710;" FontFamily="Segoe Fluent Icons" Style="{StaticResource SubtleButtonStyle}" ToolTipService.ToolTip="New Preset" />
+                        <Button x:Name="DeletePresetBtn" Click="DeletePresetBtn_Click" Content="&#xE74D;" FontFamily="Segoe Fluent Icons" Style="{StaticResource SubtleButtonStyle}" ToolTipService.ToolTip="Delete Preset" />
+                    </StackPanel>
+
                     <controls:SettingsExpander.ItemTemplate>
                         <DataTemplate x:DataType="models:ProjectFolder">
                             <controls:SettingsCard CornerRadius="0" Margin="0,-1,0,0"
@@ -230,34 +236,51 @@
                 <!-- Blender & Backups Section -->
                 <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" Text="Blender &amp; backups" />
                 
-                <!-- Custom Blender Installations -->
-                <controls:SettingsExpander Header="Custom Blender Installations"
-                                         Description="Add custom Blender executables to show on the Home page."
+                <!-- Blender Installations -->
+                <controls:SettingsExpander Header="Blender Installations"
+                                         Description="Manage visibility, executable paths, and custom launch arguments for all detected and custom Blender versions."
                                          HeaderIcon="{ui:FontIcon Glyph=&#xE7B8;}"
                                          IsExpanded="False"
-                                         ItemsSource="{x:Bind CustomBlenders}">
+                                         ItemsSource="{x:Bind BlenderInstallations}">
                     <controls:SettingsExpander.ItemTemplate>
-                        <DataTemplate x:DataType="models:CustomBlenderInfo">
+                        <DataTemplate x:DataType="models:BlenderInstallationViewModel">
                             <controls:SettingsCard CornerRadius="0" Margin="0,-1,0,0">
-                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
-                                    <TextBlock Grid.Column="0" 
-                                             Text="{x:Bind Path, Mode=OneWay}" 
-                                             TextTrimming="CharacterEllipsis"
-                                             VerticalAlignment="Center" />
+                                <controls:SettingsCard.Header>
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <CheckBox IsChecked="{x:Bind IsVisible, Mode=TwoWay}" 
+                                                  VerticalAlignment="Center" 
+                                                  MinWidth="0"
+                                                  Padding="0"
+                                                  ToolTipService.ToolTip="Show/hide version in app" />
+                                        
+                                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{x:Bind ExecutablePath}" 
+                                                       FontSize="12" 
+                                                       Foreground="{ThemeResource SystemControlPageTextBaseMediumBrush}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </controls:SettingsCard.Header>
+                                
+                                <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                                    <!-- Launch Arguments TextBox -->
+                                    <TextBox Grid.Column="0"
+                                             Text="{x:Bind LaunchArguments, Mode=TwoWay}"
+                                             PlaceholderText="Launch arguments (e.g. --factory-startup)"
+                                             Width="274"
+                                             VerticalAlignment="Center"
+                                             LostFocus="LaunchArguments_LostFocus"
+                                             KeyDown="LaunchArguments_KeyDown" />
+
                                     <Button Grid.Column="1" 
-                                            Click="BrowseCustomBlender_Click" 
-                                            Content="&#xE8DA;" 
-                                            FontFamily="Segoe Fluent Icons" 
-                                            ToolTipService.ToolTip="Change Path"
-                                            VerticalAlignment="Stretch"
-                                            DataContext="{x:Bind}" />
-                                    <Button Grid.Column="2" 
-                                            Click="RemoveCustomBlender_Click" 
+                                            Click="RemoveBlenderInstallation_Click" 
                                             Content="&#xE711;" 
                                             FontFamily="Segoe Fluent Icons" 
                                             Style="{StaticResource SubtleButtonStyle}"
-                                            VerticalAlignment="Stretch"
+                                            VerticalAlignment="Center"
                                             DataContext="{x:Bind}"
+                                            Visibility="{x:Bind IsCustom, Converter={StaticResource BooleanToVisibilityConverter}}"
                                             IsTabStop="False" />
                                 </Grid>
                             </controls:SettingsCard>
@@ -269,6 +292,44 @@
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <FontIcon Glyph="&#xE710;" FontSize="16" />
                                     <TextBlock Text="Add Blender Executable" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </controls:SettingsCard.Header>
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.ItemsFooter>
+                </controls:SettingsExpander>
+
+                <!-- Custom Scan Folders -->
+                <controls:SettingsExpander Header="Custom Scan Folders"
+                                         Description="Add directories to automatically scan for portable/custom Blender versions (scans direct subfolders)."
+                                         HeaderIcon="{ui:FontIcon Glyph=&#xE8B7;}"
+                                         IsExpanded="False"
+                                         ItemsSource="{x:Bind CustomScanFolders}">
+                    <controls:SettingsExpander.ItemTemplate>
+                        <DataTemplate x:DataType="models:ScanFolderInfo">
+                            <controls:SettingsCard CornerRadius="0" Margin="0,-1,0,0">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <TextBlock Grid.Column="0" 
+                                             Text="{x:Bind Path, Mode=OneWay}" 
+                                             TextTrimming="CharacterEllipsis"
+                                             VerticalAlignment="Center" />
+                                    <Button Grid.Column="1" 
+                                            Click="RemoveScanFolder_Click" 
+                                            Content="&#xE711;" 
+                                            FontFamily="Segoe Fluent Icons" 
+                                            Style="{StaticResource SubtleButtonStyle}"
+                                            VerticalAlignment="Center"
+                                            DataContext="{x:Bind}"
+                                            IsTabStop="False" />
+                                </Grid>
+                            </controls:SettingsCard>
+                        </DataTemplate>
+                    </controls:SettingsExpander.ItemTemplate>
+                    <controls:SettingsExpander.ItemsFooter>
+                        <controls:SettingsCard IsClickEnabled="True" Click="AddScanFolder_Click" CornerRadius="0,0,4,4" Margin="0,-1,0,0" Style="{StaticResource DefaultSettingsExpanderItemStyle}">
+                            <controls:SettingsCard.Header>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <FontIcon Glyph="&#xE710;" FontSize="16" />
+                                    <TextBlock Text="Add Scan Folder" VerticalAlignment="Center" />
                                 </StackPanel>
                             </controls:SettingsCard.Header>
                         </controls:SettingsCard>
