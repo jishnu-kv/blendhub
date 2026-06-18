@@ -1,0 +1,206 @@
+<Page
+    x:Class="BlendHub.Pages.BackupPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:BlendHub.Pages"
+    xmlns:models="using:BlendHub.Models"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    xmlns:ui="using:CommunityToolkit.WinUI"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <CollectionViewSource x:Name="GroupedBackupItems" />
+    </Page.Resources>
+
+    <Grid Padding="36,36,36,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid x:Name="HeaderGrid" Grid.Row="0" ColumnDefinitions="*, Auto" RowSpacing="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                <TextBlock x:Uid="BackupPage_Title"
+                           Style="{StaticResource TitleTextBlockStyle}"
+                           AutomationProperties.HeadingLevel="Level1" />
+                <TextBlock Grid.Row="1"
+                           x:Uid="BackupPage_Subtitle"
+                           Style="{StaticResource BodyTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+
+            <StackPanel x:Name="ActionPanel" Grid.Column="1" Grid.RowSpan="2" Orientation="Horizontal"
+                Spacing="16" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <ProgressBar x:Name="BackupProgressBar" Value="{x:Bind ViewModel.BackupProgress, Mode=OneWay}" Maximum="100" Height="4"
+                    MinWidth="120" IsIndeterminate="{x:Bind ViewModel.IsBackingUp, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsBackingUp, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center" />
+                <Button x:Name="StartBackupButton"
+                    AutomationProperties.AutomationId="StartBackupButton"
+                    Click="StartBackupButton_Click"
+                    IsEnabled="{x:Bind ViewModel.IsStartBackupEnabled, Mode=OneWay}"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Height="36"
+                    VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE74E;" FontSize="14" />
+                        <TextBlock x:Uid="BackupPage_StartBackupText" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Info Bars -->
+        <Grid x:Name="InfoBarPanel" Grid.Row="2" Margin="0" HorizontalAlignment="Stretch">
+            <InfoBar x:Name="WarningInfoBar" IsOpen="{x:Bind ViewModel.IsWarningOpen, Mode=TwoWay}" IsClosable="{x:Bind ViewModel.IsWarningClosable, Mode=OneWay}" Severity="{x:Bind ViewModel.WarningSeverity, Mode=OneWay}"
+                Title="{x:Bind ViewModel.WarningTitle, Mode=OneWay}" Message="{x:Bind ViewModel.WarningMessage, Mode=OneWay}" HorizontalAlignment="Stretch" Margin="0,20,0,20" />
+            <InfoBar x:Name="ErrorInfoBar" IsOpen="{x:Bind ViewModel.IsErrorOpen, Mode=TwoWay}" IsClosable="True" Severity="Error"
+                Title="Error" Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" HorizontalAlignment="Stretch" Margin="0,20,0,20" />
+            <InfoBar x:Name="SuccessInfoBar" IsOpen="{x:Bind ViewModel.IsSuccessOpen, Mode=TwoWay}" IsClosable="True" Severity="Success"
+                Title="Backup Complete" Message="{x:Bind ViewModel.SuccessMessage, Mode=OneWay}" HorizontalAlignment="Stretch" Margin="0,20,0,20" />
+        </Grid>
+
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+            VerticalContentAlignment="Stretch" Padding="0,6,0,0">
+            <StackPanel Spacing="16" Padding="0">
+
+                <StackPanel Spacing="4">
+                    <!-- Select Blender Version -->
+                    <controls:SettingsCard x:Uid="BackupPage_SelectVersion">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE7B8;" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <StackPanel Orientation="Vertical" Spacing="4">
+                            <ComboBox x:Name="VersionComboBox" MinWidth="200"
+                                AutomationProperties.AutomationId="VersionComboBox"
+                                HorizontalAlignment="Right"
+                                ItemsSource="{x:Bind ViewModel.InstalledVersionsList, Mode=OneWay}"
+                                SelectedItem="{x:Bind ViewModel.SelectedVersion, Mode=TwoWay}"
+                                SelectionChanged="VersionComboBox_SelectionChanged"
+                                DisplayMemberPath="DisplayName" />
+                            <TextBlock x:Name="VersionPathText"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                FontStyle="Italic"
+                                TextWrapping="Wrap"
+                                HorizontalAlignment="Right" />
+                        </StackPanel>
+                    </controls:SettingsCard>
+
+                    <!-- Items to Include -->
+                    <controls:SettingsExpander x:Uid="BackupPage_ItemsInclude"
+                        IsExpanded="True">
+                        <controls:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE8A4;" />
+                        </controls:SettingsExpander.HeaderIcon>
+                        <controls:SettingsExpander.Items>
+                            <controls:SettingsCard ContentAlignment="Vertical"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                Padding="60,16" CornerRadius="0">
+                                <ItemsRepeater x:Name="BackupItemsRepeater"
+                                    ItemsSource="{Binding Source={StaticResource GroupedBackupItems}}"
+                                    HorizontalAlignment="Stretch"
+                                    ItemTemplate="{StaticResource GroupedConfigItemsTemplate}">
+                                    <ItemsRepeater.Layout>
+                                        <StackLayout Orientation="Horizontal" Spacing="88" />
+                                    </ItemsRepeater.Layout>
+                                </ItemsRepeater>
+                            </controls:SettingsCard>
+                        </controls:SettingsExpander.Items>
+                    </controls:SettingsExpander>
+
+                    <!-- Manage Backups -->
+                    <controls:SettingsExpander x:Name="ManageBackupsExpander"
+                        x:Uid="BackupPage_ManageBackups"
+                        IsEnabled="{x:Bind ViewModel.IsManageBackupsEnabled, Mode=OneWay}"
+                        IsExpanded="{x:Bind ViewModel.IsManageBackupsExpanded, Mode=TwoWay}"
+                        ItemsSource="{x:Bind ViewModel.Backups, Mode=OneWay}">
+                        <controls:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE8B7;" />
+                        </controls:SettingsExpander.HeaderIcon>
+
+                        <controls:SettingsExpander.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <controls:SettingsCard Header="{x:Bind}"
+                                    ContentAlignment="Right" CornerRadius="0">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Click="OpenItem_Click" Tag="{x:Bind}"
+                                            ToolTipService.ToolTip="Open folder"
+                                            AutomationProperties.AutomationId="{x:Bind local:BackupPage.GetOpenBackupAutomationId((x:String))}"
+                                            AutomationProperties.Name="Open Backup Folder">
+                                            <FontIcon Glyph="&#xED25;" FontSize="14" />
+                                        </Button>
+                                        <Button Click="DeleteItem_Click" Tag="{x:Bind}"
+                                            Style="{StaticResource DefaultButtonStyle}"
+                                            ToolTipService.ToolTip="Delete backup"
+                                            AutomationProperties.AutomationId="{x:Bind local:BackupPage.GetDeleteBackupAutomationId((x:String))}"
+                                            AutomationProperties.Name="Delete Backup">
+                                            <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                                        </Button>
+                                        <Button Click="InfoItem_Click" Tag="{x:Bind}"
+                                            ToolTipService.ToolTip="View items"
+                                            AutomationProperties.AutomationId="{x:Bind local:BackupPage.GetViewBackupAutomationId((x:String))}"
+                                            AutomationProperties.Name="View Backup Items">
+                                            <FontIcon Glyph="&#xE946;" FontSize="14" />
+                                        </Button>
+                                    </StackPanel>
+                                </controls:SettingsCard>
+                            </DataTemplate>
+                        </controls:SettingsExpander.ItemTemplate>
+                    </controls:SettingsExpander>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <TeachingTip x:Name="ItemsInfoTeachingTip"
+            Title="Backup Contents"
+            IsLightDismissEnabled="True">
+            <TeachingTip.Content>
+                <ItemsRepeater ItemsSource="{Binding}" Margin="0,8,0,0">
+                    <ItemsRepeater.Layout>
+                        <StackLayout Spacing="8" Orientation="Vertical" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="models:ConfigItemViewModel">
+                            <Grid HorizontalAlignment="Stretch" Margin="0,4" Width="260">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Icon -->
+                                <FontIcon Grid.Column="0" Glyph="{x:Bind StatusGlyph}" 
+                                    Foreground="{x:Bind StatusBrush}"
+                                    FontSize="14" Margin="0,0,12,0" />
+
+                                <!-- Name -->
+                                <TextBlock Grid.Column="1" Text="{x:Bind Name}" 
+                                    Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"
+                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
+                                <!-- Status Badge/Pill -->
+                                <Border Grid.Column="2" Padding="8,4" CornerRadius="4"
+                                    Background="{x:Bind StatusPillBackground}">
+                                    <TextBlock Text="{x:Bind StatusText}" 
+                                        Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"
+                                        Foreground="{x:Bind StatusBrush}" />
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </TeachingTip.Content>
+        </TeachingTip>
+    </Grid>
+</Page>
+

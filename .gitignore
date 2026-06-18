@@ -1,7 +1,3 @@
-# Build and generation scripts
-build_release.bat
-generate_assets.py
-
 # Visual Studio files
 .vs/
 *.user

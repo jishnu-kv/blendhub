@@ -1,0 +1,611 @@
+<Page
+    x:Class="BlendHub.Pages.AddonsPage"
+    x:Name="PageRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:BlendHub.Pages"
+    xmlns:services="using:BlendHub.Services"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    xmlns:ui="using:CommunityToolkit.WinUI"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Page.Resources>
+        <ResourceDictionary>
+            <local:AddonTypeToBrushConverter x:Key="AddonTypeToBrushConverter" />
+            <local:AddonGroupHeaderMarginConverter x:Key="AddonGroupHeaderMarginConverter" />
+            <CollectionViewSource x:Key="AddonsGroupedSource" IsSourceGrouped="True" Source="{x:Bind GroupedAddons, Mode=OneWay}" />
+
+            <!-- ListView Item Template -->
+            <DataTemplate x:Key="ListViewTemplate" x:DataType="services:AddonItem">
+                <Grid Height="72" Padding="16,12"
+                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                      BorderThickness="1" CornerRadius="4"
+                      ColumnDefinitions="*,92,36"
+                      HorizontalAlignment="Stretch">
+                    <Grid.ContextFlyout>
+                        <MenuFlyout Opening="MenuFlyout_Opening">
+                            <MenuFlyoutItem x:Name="MenuDownloadInstall" Text="Download &amp; Install" Click="DownloadInstallButton_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE896;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="MenuUpdate" Text="Update Extension" Click="UpdateAddonButton_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE895;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="MenuOpenFolder" Text="Open Folder" Click="OpenFolderButton_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE8DA;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="MenuWebsite" Text="Website" Click="WebsiteButton_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE71B;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="MenuSync" Text="Sync to Version" Click="SyncButton_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE895;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSeparator x:Name="MenuSeparator" />
+                            <MenuFlyoutItem x:Name="MenuUninstall" Text="Uninstall" Click="UninstallButton_Click" Foreground="{ThemeResource SystemFillColorCriticalBrush}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE74D;" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </Grid.ContextFlyout>
+
+                <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,16,0">
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,2">
+                            <TextBlock Text="{x:Bind Name}" Style="{StaticResource BodyStrongTextBlockStyle}"
+                                       MaxLines="1" TextTrimming="CharacterEllipsis"
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="1" Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   MaxLines="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <!-- Middle Column: Badge -->
+                    <Border Grid.Column="1" CornerRadius="4" Padding="6,2"
+                            Background="{x:Bind Type, Converter={StaticResource AddonTypeToBrushConverter}}"
+                            VerticalAlignment="Center" HorizontalAlignment="Left"
+                            Visibility="{x:Bind ShowBadge, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="{x:Bind Type}" Style="{StaticResource CaptionTextBlockStyle}" FontSize="10" FontWeight="SemiBold" Foreground="White" />
+                    </Border>
+
+                    <!-- Right Column: Version -->
+                    <TextBlock Grid.Column="2" Text="{x:Bind Version}" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Left" />
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="GridViewTemplate" x:DataType="services:AddonItem">
+                <Grid Height="130" Padding="16"
+                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                      BorderThickness="1" CornerRadius="4"
+                      RowDefinitions="Auto,*,Auto"
+                      HorizontalAlignment="Stretch">
+                    <Grid.ContextFlyout>
+                        <MenuFlyout Opening="MenuFlyout_Opening">
+                            <MenuFlyoutItem x:Name="MenuDownloadInstall" Text="Download &amp; Install" Click="DownloadInstallButton_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE896;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="MenuUpdate" Text="Update Extension" Click="UpdateAddonButton_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE895;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="MenuOpenFolder" Text="Open Folder" Click="OpenFolderButton_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE8DA;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="MenuWebsite" Text="Website" Click="WebsiteButton_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE71B;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="MenuSync" Text="Sync to Version" Click="SyncButton_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE895;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSeparator x:Name="MenuSeparator" />
+                            <MenuFlyoutItem x:Name="MenuUninstall" Text="Uninstall" Click="UninstallButton_Click" Foreground="{ThemeResource SystemFillColorCriticalBrush}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE74D;" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </Grid.ContextFlyout>
+
+                    <!-- Row 0: Header with Name & Type Badge -->
+                    <Grid Grid.Row="0" Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{x:Bind Name}" Style="{StaticResource BodyStrongTextBlockStyle}"
+                                   MaxLines="1" TextTrimming="CharacterEllipsis"
+                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                        <Border Grid.Column="1" CornerRadius="4" Padding="6,2" Margin="8,0,0,0"
+                                Background="{x:Bind Type, Converter={StaticResource AddonTypeToBrushConverter}}"
+                                VerticalAlignment="Center"
+                                Visibility="{x:Bind ShowBadge, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Text="{x:Bind Type}" Style="{StaticResource CaptionTextBlockStyle}" FontSize="10" FontWeight="SemiBold" Foreground="White" />
+                        </Border>
+                    </Grid>
+
+                    <!-- Row 1: Tagline / Description -->
+                    <TextBlock Grid.Row="1" Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               MaxLines="3" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" Margin="0,0,0,4" />
+
+                    <!-- Row 2: Footer showing Author & Version -->
+                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE77B;" FontSize="9.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="{x:Bind Author}" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="140" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE90A;" FontSize="9.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="{x:Bind Version}" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Page.Resources>
+
+    <Grid>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Fixed Header Section -->
+        <StackPanel Grid.Row="0" Spacing="0" Padding="36,36,36,0">
+            <!-- Header Section -->
+            <Grid x:Name="HeaderGrid" Margin="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Title and Subtitle -->
+                <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="Blender Addons &amp; Extensions"
+                                   Style="{StaticResource TitleTextBlockStyle}"
+                                   AutomationProperties.HeadingLevel="Level1" />
+                        <StackPanel x:Name="BackgroundUpdatePanel" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Visibility="Collapsed">
+                            <ProgressRing Width="14" Height="14" IsActive="True" />
+                            <TextBlock Text="Syncing with blender.org..." Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Text="Discover, install, and manage your Blender enhancements."
+                               Style="{StaticResource BodyTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Margin="0" />
+                </StackPanel>
+
+                <!-- Header Actions -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Button x:Name="InstallAddonButton" Click="InstallAddonButton_Click"
+                            Style="{StaticResource AccentButtonStyle}" Padding="16,8" Height="36" VerticalAlignment="Center"
+                            AutomationProperties.AutomationId="InstallAddonButton"
+                            AutomationProperties.Name="Install Addon">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE710;" FontSize="14" />
+                            <TextBlock Text="Install Addon" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- Dynamic Content Area (InfoBars and Search/Filters) -->
+            <StackPanel Margin="0,28,0,0" Spacing="12">
+                <!-- Info Bars Panel -->
+                <StackPanel x:Name="InfoBarPanel" Spacing="4" Margin="0" Visibility="Collapsed">
+                    <InfoBar x:Name="SuccessInfoBar" IsOpen="False" IsClosable="True" Severity="Success"
+                             Title="Success" Message="" Closed="InfoBar_Closed" Margin="0" />
+                    <InfoBar x:Name="WarningInfoBar" IsOpen="False" IsClosable="True" Severity="Warning"
+                             Title="Warning" Message="" Closed="InfoBar_Closed" Margin="0" />
+                    <InfoBar x:Name="ErrorInfoBar" IsOpen="False" IsClosable="True" Severity="Error"
+                             Title="Error" Message="" Closed="InfoBar_Closed" Margin="0" />
+                </StackPanel>
+
+                <!-- Search & Filters (Full Width) -->
+                <RelativePanel Margin="0,0,-12,0">
+                <!-- Left Side: Search & Refresh -->
+                <StackPanel x:Name="AddonSearchArea" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                            RelativePanel.AlignLeftWithPanel="True">
+                    <AutoSuggestBox x:Name="SearchBox" Width="280"
+                                    PlaceholderText="Search addons..."
+                                    TextChanged="FilterCriteriaChanged"
+                                    VerticalAlignment="Center"
+                                    AutomationProperties.AutomationId="SearchBox"
+                                    AutomationProperties.Name="Search Addons">
+                        <AutoSuggestBox.QueryIcon>
+                            <FontIcon Glyph="&#xE721;" FontSize="14" />
+                        </AutoSuggestBox.QueryIcon>
+                    </AutoSuggestBox>
+
+                    <Button x:Name="RefreshButton" Click="RefreshButton_Click" ToolTipService.ToolTip="Refresh" Height="32" Width="32" Padding="0"
+                            AutomationProperties.AutomationId="RefreshButton"
+                            AutomationProperties.Name="Refresh" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                    </Button>
+                    <TextBlock x:Name="ItemCountTextBlock" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="4,0,0,0" />
+                </StackPanel>
+
+                <!-- Right Side: Filter ComboBoxes -->
+                <controls:WrapPanel x:Name="AddonFilterArea" Orientation="Horizontal" HorizontalSpacing="12" VerticalSpacing="8" VerticalAlignment="Center"
+                                    RelativePanel.AlignRightWithPanel="True">
+                    <!-- Filters DropDownButton (Consolidated Cascading Menu) -->
+                    <DropDownButton AutomationProperties.Name="Filters" VerticalAlignment="Center" Height="32">
+                        <DropDownButton.Content>
+                            <FontIcon Glyph="&#xE71C;" FontSize="14"/>
+                        </DropDownButton.Content>
+                        <DropDownButton.Flyout>
+                            <MenuFlyout x:Name="FilterMenu">
+                                <MenuFlyoutSubItem x:Name="VersionSubMenu" Text="Blender Version"/>
+                                <MenuFlyoutSubItem x:Name="TypeSubMenu" Text="Addon Type">
+                                    <RadioMenuFlyoutItem x:Name="TypeAllItem" Text="All Types" GroupName="TypeGroup" IsChecked="True" Click="TypeMenuItem_Click"/>
+                                    <RadioMenuFlyoutItem x:Name="TypeAddonItem" Text="Addon" GroupName="TypeGroup" Click="TypeMenuItem_Click"/>
+                                    <RadioMenuFlyoutItem x:Name="TypeExtensionItem" Text="Extension" GroupName="TypeGroup" Click="TypeMenuItem_Click"/>
+                                    <RadioMenuFlyoutItem x:Name="TypeThemeItem" Text="Theme" GroupName="TypeGroup" Click="TypeMenuItem_Click"/>
+                                </MenuFlyoutSubItem>
+                                <MenuFlyoutSubItem x:Name="CategorySubMenu" Text="Category"/>
+                                <MenuFlyoutSubItem x:Name="RepositorySubMenu" Text="Repository"/>
+                            </MenuFlyout>
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
+                </controls:WrapPanel>
+            </RelativePanel>
+        </StackPanel>
+    </StackPanel>
+
+        <!-- Main Body split layout (Grid of Cards and Details) -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,1,420" ColumnSpacing="12" Margin="36,0,36,24">
+
+            <!-- Left Side: Addons Grid -->
+            <Grid x:Name="LeftBodyGrid" Grid.Column="0">
+                <Grid Margin="0,24,0,0">
+                    <!-- GridView Mode GridView -->
+                    <GridView x:Name="AddonsGridView"
+                              SelectionChanged="AddonsListView_SelectionChanged"
+                              SizeChanged="AddonsListView_SizeChanged"
+                              ItemsSource="{Binding Source={StaticResource AddonsGroupedSource}}"
+                              SelectionMode="Single"
+                              IsSynchronizedWithCurrentItem="False"
+                              ItemTemplate="{StaticResource GridViewTemplate}"
+                              Visibility="Visible"
+                              AutomationProperties.AutomationId="AddonsGridView"
+                              AutomationProperties.Name="Addons Grid">
+                        <GridView.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <ItemsWrapGrid AreStickyGroupHeadersEnabled="False" Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </GridView.ItemsPanel>
+
+                        <GridView.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.HeaderContainerStyle>
+                                    <Style TargetType="GridViewHeaderItem">
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="MinHeight" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="GridViewHeaderItem">
+                                                    <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                                            BorderThickness="0,0,0,1"
+                                                            Margin="0,0,16,0"
+                                                            Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter Content="{TemplateBinding Content}"
+                                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                          ContentTransitions="{TemplateBinding ContentTransitions}"
+                                                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </GroupStyle.HeaderContainerStyle>
+
+                                <GroupStyle.HeaderTemplate>
+                                    <DataTemplate x:DataType="local:AddonGroup">
+                                        <TextBlock Text="{x:Bind Key}" Style="{StaticResource SubtitleTextBlockStyle}" Margin="{x:Bind Key, Converter={StaticResource AddonGroupHeaderMarginConverter}}"/>
+                                    </DataTemplate>
+                                </GroupStyle.HeaderTemplate>
+                            </GroupStyle>
+                        </GridView.GroupStyle>
+
+                        <GridView.ItemContainerStyle>
+                            <Style TargetType="GridViewItem" BasedOn="{StaticResource DefaultGridViewItemStyle}">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="0" />
+                            </Style>
+                        </GridView.ItemContainerStyle>
+                    </GridView>
+
+                    <!-- Empty State (No Addons Installed/Available) -->
+                    <StackPanel x:Name="EmptyStatePanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" Padding="24" MaxWidth="400">
+                        <FontIcon x:Name="EmptyStateIcon" Glyph="&#xE7FC;" FontSize="36" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="EmptyStateTitle" Text="No addons installed" Style="{StaticResource SubtitleTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <TextBlock x:Name="EmptyStateDescription" Text="You don't have any addons or extensions installed for your Blender versions yet." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <!-- No Search Results Message -->
+                    <StackPanel x:Name="NoSearchResultsPanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" Padding="24" MaxWidth="400">
+                        <FontIcon Glyph="&#xE721;" FontSize="36" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Margin="0,0,0,8" />
+                        <TextBlock Text="No results found" Style="{StaticResource SubtitleTextBlockStyle}" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <TextBlock Text="We couldn't find any addons matching your search. Check the spelling or try different search terms." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap" />
+                        <Button Content="Clear search" Click="ClearSearchButton_Click" Style="{StaticResource DefaultButtonStyle}" HorizontalAlignment="Center" Margin="0,12,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <!-- Vertical Separator -->
+            <Border x:Name="DetailsSeparator" Grid.Column="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,24,0,24" />
+
+            <!-- Right Side: Details Panel -->
+            <Grid x:Name="DetailsPanelOuterGrid" Grid.Column="2"
+                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                  BorderThickness="1"
+                  CornerRadius="4"
+                  Padding="24"
+                  Margin="0,24,0,0">
+                <Grid>
+                    <!-- Detail Display -->
+                    <Grid x:Name="DetailsGrid" Visibility="Visible" RowDefinitions="Auto,*,Auto">
+
+                        <!-- 1. Header & Quick Info Section -->
+                        <Grid Grid.Row="0" Margin="0,0,0,12">
+                            <StackPanel Spacing="0">
+                                <!-- Hidden controls to preserve C# compilation -->
+                                <StackPanel Visibility="Collapsed">
+                                    <!-- Source Repository Badge -->
+                                    <Border x:Name="DetailRepoBadge" CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemControlBackgroundBaseLowBrush}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <FontIcon Glyph="&#xE909;" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            <TextBlock x:Name="DetailRepoCardText" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Version Badge -->
+                                    <Border CornerRadius="4" Padding="10,4" Background="{ThemeResource AccentAAFillColorDefaultBrush}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <FontIcon Glyph="&#xE90A;" FontSize="12" Foreground="White" VerticalAlignment="Center" />
+                                            <TextBlock x:Name="DetailHistoryCurrent" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Main Title -->
+                                <TextBlock x:Name="DetailName" Style="{StaticResource TitleTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
+
+                                <!-- Author -->
+                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE77B;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                    <Button x:Name="DetailAuthorButton" Click="DetailAuthorButton_Click" Style="{StaticResource SubtleButtonStyle}" Padding="4,2" MinWidth="0" MinHeight="0" BorderThickness="0" Background="Transparent" VerticalAlignment="Center">
+                                        <TextBlock x:Name="DetailAuthorText" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                    </Button>
+                                </StackPanel>
+
+                                <!-- Badge Row (Only Size Badge is left, placed after description/tagline) -->
+                                <StackPanel x:Name="DetailSizeLabel" Orientation="Horizontal" Spacing="8" Margin="0,8,0,4">
+                                    <!-- Size Badge -->
+                                    <Border x:Name="DetailSizeBadgeBorder" CornerRadius="4" Padding="10,4" Background="{ThemeResource SystemControlBackgroundBaseLowBrush}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <FontIcon Glyph="&#xE8B7;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            <TextBlock x:Name="DetailSizeText" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Compatibility Badge -->
+                                    <Border x:Name="DetailCompatibilityHeaderBadge" CornerRadius="4" Padding="10,0,10,4" Background="Green">
+                                        <TextBlock x:Name="DetailCompatibilityHeaderBadgeText" Text="Compatible" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
+                                    </Border>
+                                </StackPanel>
+
+                                <MenuFlyoutSeparator Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- 2. Scrollable Structured Properties -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,16">
+                            <StackPanel Spacing="8">
+
+                                <!-- Plain Description/Tagline (No Card Border) -->
+                                <TextBlock x:Name="DetailTagline" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" LineHeight="20" />
+
+                                <!-- Compatibility Custom Card -->
+                                <Border x:Name="CompatibilityCard" CornerRadius="4" Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Stretch">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                                        <FontIcon x:Name="DetailCompatibilityIcon" Glyph="&#xE73E;" FontSize="16" Grid.Column="0" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="Blender Compatibility" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                            <TextBlock x:Name="DetailCompatibilityText" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Border x:Name="DetailCompatibilityBadge" Grid.Column="2" CornerRadius="4" Padding="6,2" Background="Green" VerticalAlignment="Center">
+                                            <TextBlock x:Name="DetailCompatibilityBadgeText" Text="Compatible" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Security & Permissions Custom Card -->
+                                <Border x:Name="PropPermissionsPanel" CornerRadius="4" Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Stretch">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                        <FontIcon Glyph="&#xE7EF;" FontSize="16" Grid.Column="0" VerticalAlignment="Top" Margin="0,2,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <StackPanel Grid.Column="1" Spacing="8" HorizontalAlignment="Stretch">
+                                            <TextBlock Text="Required Permissions" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
+                                            <!-- Dynamic Badges -->
+                                            <controls:WrapPanel Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="8">
+                                                <!-- Safe Shield / No Permissions -->
+                                                <Border x:Name="PermNoPermissionsBadge" CornerRadius="4" Padding="8,3" Background="Green" Visibility="Collapsed">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <FontIcon Glyph="&#xE727;" FontSize="10" Foreground="White" VerticalAlignment="Center" />
+                                                        <TextBlock Text="No permissions required" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Network Access -->
+                                                <Border x:Name="PermNetworkBadge" CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemControlBackgroundAccentBrush}" Visibility="Collapsed">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <FontIcon Glyph="&#xE774;" FontSize="10" Foreground="White" VerticalAlignment="Center" />
+                                                        <TextBlock Text="Network Access" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Disk Access -->
+                                                <Border x:Name="PermFilesBadge" CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemControlBackgroundAccentBrush}" Visibility="Collapsed">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <FontIcon Glyph="&#xE8B7;" FontSize="10" Foreground="White" VerticalAlignment="Center" />
+                                                        <TextBlock Text="Disk/File Access" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Clipboard Access -->
+                                                <Border x:Name="PermClipboardBadge" CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemControlBackgroundAccentBrush}" Visibility="Collapsed">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <FontIcon Glyph="&#xE8C8;" FontSize="10" Foreground="White" VerticalAlignment="Center" />
+                                                        <TextBlock Text="Clipboard Access" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="White" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </controls:WrapPanel>
+                                            <TextBlock x:Name="PropPermissions" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,0,0,0" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Installation Location Custom Card -->
+                                <Border x:Name="PropPathPanel" CornerRadius="4" Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Stretch">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                        <FontIcon Glyph="&#xE8DA;" FontSize="16" Grid.Column="0" VerticalAlignment="Top" Margin="0,2,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <StackPanel Grid.Column="1" Spacing="8" HorizontalAlignment="Stretch">
+                                            <TextBlock Text="Installation Locations" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                            <!-- Nested container for path sub-cards -->
+                                            <StackPanel x:Name="PropPathsContainer" Spacing="8" HorizontalAlignment="Stretch" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- 3. Bottom Actions Panel -->
+                        <StackPanel Grid.Row="2" Spacing="8" Margin="0,8,0,0">
+                            <!-- Online Actions -->
+                            <Grid x:Name="OnlineActionsGrid" ColumnDefinitions="*,*" ColumnSpacing="8" Visibility="Collapsed">
+                                <Button x:Name="DownloadInstallButton" Grid.Column="0" Click="DownloadInstallButton_Click"
+                                        Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Stretch"
+                                        ToolTipService.ToolTip="Download and install this extension to Blender"
+                                        AutomationProperties.AutomationId="DownloadInstallButton"
+                                        AutomationProperties.Name="Download and Install">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE896;" FontSize="14" />
+                                        <TextBlock Text="Download" />
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="WebsiteButton" Grid.Column="1" Click="WebsiteButton_Click" HorizontalAlignment="Stretch"
+                                        ToolTipService.ToolTip="Visit the extension's official website"
+                                        AutomationProperties.AutomationId="WebsiteButton"
+                                        AutomationProperties.Name="Visit Website">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE71B;" FontSize="14" />
+                                        <TextBlock Text="Visit Website" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <!-- Local Actions -->
+                            <StackPanel x:Name="LocalActionsGrid" Spacing="8" Visibility="Visible">
+                                <Button x:Name="UpdateAddonButton" Click="UpdateAddonButton_Click" HorizontalAlignment="Stretch"
+                                        Style="{StaticResource AccentButtonStyle}" Visibility="Collapsed"
+                                        ToolTipService.ToolTip="Update this extension to the latest version"
+                                        AutomationProperties.AutomationId="UpdateAddonButton"
+                                        AutomationProperties.Name="Update Extension">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE895;" FontSize="14" />
+                                        <TextBlock Text="Update Extension" />
+                                    </StackPanel>
+                                </Button>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <Button x:Name="OpenFolderButton" Grid.Column="0" Click="OpenFolderButton_Click" HorizontalAlignment="Stretch"
+                                            ToolTipService.ToolTip="Open the addon directory in File Explorer"
+                                            AutomationProperties.AutomationId="OpenFolderButton"
+                                            AutomationProperties.Name="Open Folder">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE8DA;" FontSize="14" />
+                                            <TextBlock Text="Open Folder" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="SharedWebsiteButton" Grid.Column="1" Click="WebsiteButton_Click" HorizontalAlignment="Stretch"
+                                            ToolTipService.ToolTip="Visit the official homepage or documentation link"
+                                            AutomationProperties.AutomationId="SharedWebsiteButton"
+                                            AutomationProperties.Name="Website">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE71B;" FontSize="14" />
+                                            <TextBlock Text="Website" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <Button x:Name="SyncButton" Grid.Column="0" Click="SyncButton_Click" HorizontalAlignment="Stretch"
+                                            ToolTipService.ToolTip="Sync this addon to another installed Blender version"
+                                            AutomationProperties.AutomationId="SyncButton"
+                                            AutomationProperties.Name="Sync to Version">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE895;" FontSize="14" />
+                                            <TextBlock Text="Sync to Version" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="UninstallButton" Grid.Column="1" Click="UninstallButton_Click" HorizontalAlignment="Stretch"
+                                            ToolTipService.ToolTip="Permanently delete this addon from Blender"
+                                            AutomationProperties.AutomationId="UninstallButton"
+                                            AutomationProperties.Name="Uninstall">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE74D;" FontSize="14" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                            <TextBlock Text="Uninstall" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- Loading / Progress Overlay -->
+        <Grid x:Name="ProgressOverlay" Grid.Row="0" Grid.RowSpan="3"
+              Background="Transparent"
+              IsHitTestVisible="False"
+              Visibility="Collapsed"
+              HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                <ProgressRing x:Name="ProgressOverlayRing" Width="48" Height="48" IsActive="True" />
+                <TextBlock x:Name="ProgressOverlayText" Text="Loading Extensions..." Style="{StaticResource BodyLargeStrongTextBlockStyle}" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

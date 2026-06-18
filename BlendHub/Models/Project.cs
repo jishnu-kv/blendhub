@@ -6,7 +6,7 @@ namespace BlendHub.Models
     public enum ProjectItemType { Note, Todo }
 
     public enum TodoPriority { None, Low, Medium, High }
-    public enum TodoStatus { Todo, InProgress, Completed }
+    public enum TodoStatus { InProgress, Completed }
 
     public class ProjectItem : System.ComponentModel.INotifyPropertyChanged
     {
@@ -44,7 +44,7 @@ namespace BlendHub.Models
             set { _priority = value; OnPropertyChanged(nameof(Priority)); }
         }
 
-        private TodoStatus _status = TodoStatus.Todo;
+        private TodoStatus _status = TodoStatus.InProgress;
         public TodoStatus Status
         {
             get => _status;
@@ -60,7 +60,7 @@ namespace BlendHub.Models
         public bool IsCompleted
         {
             get => _status == TodoStatus.Completed;
-            set => Status = value ? TodoStatus.Completed : TodoStatus.Todo;
+            set => Status = value ? TodoStatus.Completed : TodoStatus.InProgress;
         }
 
         public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
@@ -68,17 +68,81 @@ namespace BlendHub.Models
             PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
     }
 
-    public class Project
+    public class Project : System.ComponentModel.INotifyPropertyChanged
     {
-        public string Name { get; set; } = string.Empty;
-        public string Path { get; set; } = string.Empty;
-        public string BlendFileName { get; set; } = string.Empty;
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string propertyName) =>
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+
+        private string _name = string.Empty;
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(nameof(Name)); }
+        }
+
+        private string _path = string.Empty;
+        public string Path
+        {
+            get => _path;
+            set 
+            { 
+                _path = value; 
+                OnPropertyChanged(nameof(Path)); 
+                OnPropertyChanged(nameof(FolderExists)); 
+                OnPropertyChanged(nameof(StatusText));
+                OnPropertyChanged(nameof(FullBlendPath));
+                OnPropertyChanged(nameof(BlendFileExists));
+            }
+        }
+
+        private string _blendFileName = string.Empty;
+        public string BlendFileName
+        {
+            get => _blendFileName;
+            set 
+            { 
+                _blendFileName = value; 
+                OnPropertyChanged(nameof(BlendFileName)); 
+                OnPropertyChanged(nameof(FullBlendPath)); 
+                OnPropertyChanged(nameof(BlendFileExists)); 
+            }
+        }
+
         public bool AutoUpdatePrimaryBlend { get; set; } = false;
         public List<string> Subfolders { get; set; } = new List<string>();
-        public string BlenderVersion { get; set; } = string.Empty;
+
+        private string _blenderVersion = string.Empty;
+        public string BlenderVersion
+        {
+            get => _blenderVersion;
+            set { _blenderVersion = value; OnPropertyChanged(nameof(BlenderVersion)); }
+        }
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string Notes { get; set; } = string.Empty; // Legacy
         public List<ProjectItem> Items { get; set; } = new List<ProjectItem>();
+
+        private int _completionProgress = 0;
+        public int CompletionProgress
+        {
+            get => _completionProgress;
+            set { _completionProgress = value; OnPropertyChanged(nameof(CompletionProgress)); }
+        }
+
+        private bool _showProgress = true;
+        public bool ShowProgress
+        {
+            get => _showProgress;
+            set { _showProgress = value; OnPropertyChanged(nameof(ShowProgress)); }
+        }
+
+        private bool _isPinned = false;
+        public bool IsPinned
+        {
+            get => _isPinned;
+            set { _isPinned = value; OnPropertyChanged(nameof(IsPinned)); }
+        }
 
         /// <summary>
         /// Custom file launchers: maps file extension (e.g. ".psd") to executable path.
@@ -102,10 +166,5 @@ namespace BlendHub.Models
         [System.Text.Json.Serialization.JsonIgnore]
         public string StatusText => FolderExists ? "" : "⚠ Project folder not found";
 
-        // Static helpers for x:Bind function binding
-        public static double GetOpacity(bool exists) => exists ? 1.0 : 0.55;
-        public static Microsoft.UI.Xaml.Visibility GetMissingVisibility(bool exists) =>
-            exists ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
-        public static string FormatDate(DateTime date) => date.ToString("d");
     }
 }

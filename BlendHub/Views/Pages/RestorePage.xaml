@@ -1,0 +1,138 @@
+<Page
+    x:Class="BlendHub.Pages.RestorePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:BlendHub.Pages"
+    xmlns:models="using:BlendHub.Models"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <CollectionViewSource x:Name="GroupedRestoreItems" />
+    </Page.Resources>
+
+    <Grid Padding="36,36,36,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid x:Name="HeaderGrid" Grid.Row="0" ColumnDefinitions="*, Auto" RowSpacing="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                <TextBlock x:Uid="RestorePage_Title"
+                           Style="{StaticResource TitleTextBlockStyle}"
+                           AutomationProperties.HeadingLevel="Level1" />
+                <TextBlock Grid.Row="1"
+                           x:Uid="RestorePage_Subtitle"
+                           Style="{StaticResource BodyTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+
+            <StackPanel x:Name="ActionPanel" Grid.Column="1" Grid.RowSpan="2" Orientation="Horizontal"
+                Spacing="16" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <ProgressBar x:Name="RestoreProgressBar" Value="{x:Bind ViewModel.RestoreProgress, Mode=OneWay}" Maximum="100" Height="4"
+                    MinWidth="120" IsIndeterminate="{x:Bind ViewModel.IsRestoring, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsRestoring, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center" />
+                <Button x:Name="StartRestoreButton"
+                    Click="StartRestoreButton_Click"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Height="36"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="StartRestoreButton"
+                    IsEnabled="{x:Bind ViewModel.IsStartRestoreEnabled, Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE81C;" FontSize="14" />
+                        <TextBlock x:Uid="RestorePage_StartRestoreText" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Info Bars -->
+        <Grid x:Name="InfoBarPanel" Grid.Row="2" Margin="0" HorizontalAlignment="Stretch">
+            <InfoBar x:Name="WarningInfoBar" Margin="0,20,0,20" IsOpen="{x:Bind ViewModel.IsWarningOpen, Mode=TwoWay}" IsClosable="{x:Bind ViewModel.IsWarningClosable, Mode=OneWay}" Severity="{x:Bind ViewModel.WarningSeverity, Mode=OneWay}"
+                Title="{x:Bind ViewModel.WarningTitle, Mode=OneWay}" Message="{x:Bind ViewModel.WarningMessage, Mode=OneWay}" HorizontalAlignment="Stretch" Closed="InfoBar_Closed" />
+            <InfoBar x:Name="ErrorInfoBar" Margin="0,20,0,20" IsOpen="{x:Bind ViewModel.IsErrorOpen, Mode=TwoWay}" IsClosable="True" Severity="Error"
+                Title="Error" Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" HorizontalAlignment="Stretch" Closed="InfoBar_Closed" />
+            <InfoBar x:Name="SuccessInfoBar" Margin="0,20,0,20" IsOpen="{x:Bind ViewModel.IsSuccessOpen, Mode=TwoWay}" IsClosable="True" Severity="Success"
+                Title="Restore Complete" Message="{x:Bind ViewModel.SuccessMessage, Mode=OneWay}" HorizontalAlignment="Stretch" Closed="InfoBar_Closed">
+                <InfoBar.ActionButton>
+                    <Button x:Name="LaunchBlenderButton" Content="Launch Blender" Click="LaunchBlenderButton_Click"
+                            AutomationProperties.AutomationId="LaunchBlenderButton"
+                            AutomationProperties.Name="Launch Blender" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+        </Grid>
+
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+            VerticalContentAlignment="Stretch" Padding="0,6,0,0">
+            <StackPanel Spacing="16" Padding="0">
+
+                <StackPanel Spacing="4">
+                    <!-- Select Backup -->
+                    <controls:SettingsCard x:Name="BackupSelectionCard" x:Uid="RestorePage_BackupSelectionCard"
+                        IsEnabled="{x:Bind ViewModel.IsBackupSelectionEnabled, Mode=OneWay}">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE7B8;" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ComboBox x:Name="BackupNameComboBox" MinWidth="240"
+                            PlaceholderText="Select backup..." HorizontalAlignment="Right"
+                            ItemsSource="{x:Bind ViewModel.BackupsList, Mode=OneWay}"
+                            SelectedItem="{x:Bind ViewModel.SelectedBackup, Mode=TwoWay}"
+                            SelectionChanged="BackupNameComboBox_SelectionChanged"
+                            AutomationProperties.AutomationId="BackupNameComboBox"
+                            AutomationProperties.Name="Select Backup Name" />
+                    </controls:SettingsCard>
+
+                    <!-- Restore Destination -->
+                    <controls:SettingsCard x:Name="RestoreDestinationCard" x:Uid="RestorePage_RestoreDestinationCard"
+                        IsEnabled="{x:Bind ViewModel.IsTargetSelectionEnabled, Mode=OneWay}">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE8DE;" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ComboBox x:Name="TargetVersionComboBox" MinWidth="200"
+                            DisplayMemberPath="DisplayName"
+                            ItemsSource="{x:Bind ViewModel.TargetVersionsList, Mode=OneWay}"
+                            SelectedItem="{x:Bind ViewModel.SelectedTarget, Mode=TwoWay}"
+                            SelectionChanged="TargetVersionComboBox_SelectionChanged"
+                            AutomationProperties.AutomationId="TargetVersionComboBox"
+                            AutomationProperties.Name="Target Blender Version" />
+                    </controls:SettingsCard>
+
+                    <!-- Items to Include -->
+                    <controls:SettingsExpander x:Name="ItemsExpander" x:Uid="RestorePage_ItemsExpander"
+                        IsEnabled="{x:Bind ViewModel.IsItemsExpanderEnabled, Mode=OneWay}"
+                        IsExpanded="True">
+                        <controls:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE8A4;" />
+                        </controls:SettingsExpander.HeaderIcon>
+                        <controls:SettingsExpander.Items>
+                            <controls:SettingsCard ContentAlignment="Vertical"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                Padding="60,16" CornerRadius="0">
+                                <ItemsRepeater x:Name="RestoreItemsRepeater"
+                                    ItemsSource="{Binding Source={StaticResource GroupedRestoreItems}}"
+                                    HorizontalAlignment="Stretch"
+                                    ItemTemplate="{StaticResource GroupedConfigItemsTemplate}">
+                                    <ItemsRepeater.Layout>
+                                        <StackLayout Orientation="Horizontal" Spacing="88" />
+                                    </ItemsRepeater.Layout>
+                                </ItemsRepeater>
+                            </controls:SettingsCard>
+                        </controls:SettingsExpander.Items>
+                    </controls:SettingsExpander>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+    </Grid>
+</Page>

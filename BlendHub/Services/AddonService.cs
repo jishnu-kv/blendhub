@@ -32,7 +32,7 @@ namespace BlendHub.Services
         public string Author { get; set; } = "Unknown";
         public string Description { get; set; } = string.Empty;
         public string Category { get; set; } = "General";
-        public string Type { get; set; } = "Legacy Addon"; // "Legacy Addon" or "Extension"
+        public string Type { get; set; } = "Addon"; // "Addon" or "Extension"
         public string Repository { get; set; } = string.Empty; // e.g. "blender_org", "user_default" (empty for legacy)
         public string BlenderVersion { get; set; } = string.Empty; // e.g. "5.1"
         public string Path { get; set; } = string.Empty; // Absolute path to directory or .py file
@@ -45,6 +45,11 @@ namespace BlendHub.Services
         public string Copyright { get; set; } = string.Empty;
         public string Permissions { get; set; } = string.Empty;
         public long ArchiveSize { get; set; }
+
+        public string ExtensionType { get; set; } = "add-on"; // "add-on" or "theme"
+
+        public bool IsOnline => !string.IsNullOrEmpty(Path) && Path.StartsWith("http", StringComparison.OrdinalIgnoreCase);
+        public bool ShowBadge => !IsOnline;
 
         public List<string> BlenderVersions { get; set; } = new();
         public List<string> InstallationPaths { get; set; } = new();
@@ -177,7 +182,7 @@ namespace BlendHub.Services
             {
                 FolderName = Path.GetFileName(path),
                 Path = path,
-                Type = "Legacy Addon",
+                Type = "Addon",
                 BlenderVersion = blenderVersion,
                 Name = Path.GetFileNameWithoutExtension(path) // Fallback name
             };
@@ -429,6 +434,9 @@ namespace BlendHub.Services
                                 break;
                             case "category":
                                 item.Category = val;
+                                break;
+                            case "type":
+                                item.ExtensionType = val.ToLowerInvariant();
                                 break;
                             case "blender_version_min":
                                 item.BlenderVersionMin = val;

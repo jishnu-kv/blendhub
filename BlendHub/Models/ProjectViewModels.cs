@@ -20,7 +20,8 @@ namespace BlendHub.Models
 
         public string Id => Item.Id;
         public string Heading { get => Item.Heading; set { Item.Heading = value; OnPropertyChanged(nameof(Heading)); } }
-        public string Content { get => Item.Content; set { Item.Content = value; OnPropertyChanged(nameof(Content)); } }
+        public string Content { get => Item.Content; set { Item.Content = value; OnPropertyChanged(nameof(Content)); OnPropertyChanged(nameof(ContentVisibility)); } }
+        public Microsoft.UI.Xaml.Visibility ContentVisibility => string.IsNullOrWhiteSpace(Content) ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
         public bool IsCompleted
         {
             get => Item.IsCompleted;

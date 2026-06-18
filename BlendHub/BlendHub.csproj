@@ -1,5 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <Platform Condition=" '$(Platform)' == '' or '$(Platform)' == 'AnyCPU' ">x64</Platform>
+    <RuntimeIdentifier Condition=" ( '$(RuntimeIdentifier)' == '' or '$(Platform)' == 'AnyCPU' ) and '$(Platform)' == 'x64' ">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition=" '$(RuntimeIdentifier)' == '' and '$(Platform)' == 'x86' ">win-x86</RuntimeIdentifier>
+    <RuntimeIdentifier Condition=" '$(RuntimeIdentifier)' == '' and '$(Platform)' == 'ARM64' ">win-arm64</RuntimeIdentifier>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
@@ -11,107 +15,107 @@
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
     <WinUISDKReferences>false</WinUISDKReferences>
-    <EnableMsixTooling>true</EnableMsixTooling>
+    <EnableMsixTooling>false</EnableMsixTooling>
     <Nullable>enable</Nullable>
     <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
-    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WindowsAppSDKSelfContained Condition="'$(Configuration)' != 'Debug'">true</WindowsAppSDKSelfContained>
     <Version>1.0.0</Version>
   </PropertyGroup>
   <ItemGroup>
-    <Content Remove="Assets\LargeTile.scale-100.png" />
-    <Content Remove="Assets\LargeTile.scale-125.png" />
-    <Content Remove="Assets\LargeTile.scale-150.png" />
-    <Content Remove="Assets\LargeTile.scale-200.png" />
-    <Content Remove="Assets\LargeTile.scale-400.png" />
-    <Content Remove="Assets\logo.scale-100.png" />
-    <Content Remove="Assets\logo.scale-125.png" />
-    <Content Remove="Assets\logo.scale-150.png" />
-    <Content Remove="Assets\logo.scale-200.png" />
-    <Content Remove="Assets\logo.scale-400.png" />
-    <Content Remove="Assets\SmallTile.scale-100.png" />
-    <Content Remove="Assets\SmallTile.scale-125.png" />
-    <Content Remove="Assets\SmallTile.scale-150.png" />
-    <Content Remove="Assets\SmallTile.scale-200.png" />
-    <Content Remove="Assets\SmallTile.scale-400.png" />
-    <Content Remove="Assets\SplashScreen.scale-100.png" />
-    <Content Remove="Assets\SplashScreen.scale-125.png" />
-    <Content Remove="Assets\SplashScreen.scale-150.png" />
-    <Content Remove="Assets\SplashScreen.scale-200.png" />
-    <Content Remove="Assets\SplashScreen.scale-400.png" />
-    <Content Remove="Assets\Square150x150Logo.scale-100.png" />
-    <Content Remove="Assets\Square150x150Logo.scale-125.png" />
-    <Content Remove="Assets\Square150x150Logo.scale-150.png" />
-    <Content Remove="Assets\Square150x150Logo.scale-200.png" />
-    <Content Remove="Assets\Square150x150Logo.scale-400.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-16.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-24.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-256.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-32.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-48.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-16.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-24.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-256.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-32.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-48.png" />
-    <Content Remove="Assets\Square44x44Logo.scale-100.png" />
-    <Content Remove="Assets\Square44x44Logo.scale-125.png" />
-    <Content Remove="Assets\Square44x44Logo.scale-150.png" />
-    <Content Remove="Assets\Square44x44Logo.scale-200.png" />
-    <Content Remove="Assets\Square44x44Logo.scale-400.png" />
-    <Content Remove="Assets\Square44x44Logo.targetsize-16.png" />
-    <Content Remove="Assets\Square44x44Logo.targetsize-24.png" />
-    <Content Remove="Assets\Square44x44Logo.targetsize-256.png" />
-    <Content Remove="Assets\Square44x44Logo.targetsize-32.png" />
-    <Content Remove="Assets\Square44x44Logo.targetsize-48.png" />
-    <Content Remove="Assets\StoreLogo.scale-100.png" />
-    <Content Remove="Assets\StoreLogo.scale-125.png" />
-    <Content Remove="Assets\StoreLogo.scale-150.png" />
-    <Content Remove="Assets\StoreLogo.scale-200.png" />
-    <Content Remove="Assets\StoreLogo.scale-400.png" />
-    <Content Remove="Assets\Wide310x150Logo.scale-100.png" />
-    <Content Remove="Assets\Wide310x150Logo.scale-125.png" />
-    <Content Remove="Assets\Wide310x150Logo.scale-150.png" />
-    <Content Remove="Assets\Wide310x150Logo.scale-200.png" />
-    <Content Remove="Assets\Wide310x150Logo.scale-400.png" />
+    <Content Remove="Assets\AppIcons\LargeTile.scale-100.png" />
+    <Content Remove="Assets\AppIcons\LargeTile.scale-125.png" />
+    <Content Remove="Assets\AppIcons\LargeTile.scale-150.png" />
+    <Content Remove="Assets\AppIcons\LargeTile.scale-200.png" />
+    <Content Remove="Assets\AppIcons\LargeTile.scale-400.png" />
+    <Content Remove="Assets\AppIcons\logo.scale-100.png" />
+    <Content Remove="Assets\AppIcons\logo.scale-125.png" />
+    <Content Remove="Assets\AppIcons\logo.scale-150.png" />
+    <Content Remove="Assets\AppIcons\logo.scale-200.png" />
+    <Content Remove="Assets\AppIcons\logo.scale-400.png" />
+    <Content Remove="Assets\AppIcons\SmallTile.scale-100.png" />
+    <Content Remove="Assets\AppIcons\SmallTile.scale-125.png" />
+    <Content Remove="Assets\AppIcons\SmallTile.scale-150.png" />
+    <Content Remove="Assets\AppIcons\SmallTile.scale-200.png" />
+    <Content Remove="Assets\AppIcons\SmallTile.scale-400.png" />
+    <Content Remove="Assets\AppIcons\SplashScreen.scale-100.png" />
+    <Content Remove="Assets\AppIcons\SplashScreen.scale-125.png" />
+    <Content Remove="Assets\AppIcons\SplashScreen.scale-150.png" />
+    <Content Remove="Assets\AppIcons\SplashScreen.scale-200.png" />
+    <Content Remove="Assets\AppIcons\SplashScreen.scale-400.png" />
+    <Content Remove="Assets\AppIcons\Square150x150Logo.scale-100.png" />
+    <Content Remove="Assets\AppIcons\Square150x150Logo.scale-125.png" />
+    <Content Remove="Assets\AppIcons\Square150x150Logo.scale-150.png" />
+    <Content Remove="Assets\AppIcons\Square150x150Logo.scale-200.png" />
+    <Content Remove="Assets\AppIcons\Square150x150Logo.scale-400.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.altform-lightunplated_targetsize-16.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.altform-lightunplated_targetsize-24.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.altform-lightunplated_targetsize-256.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.altform-lightunplated_targetsize-32.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.altform-lightunplated_targetsize-48.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.altform-unplated_targetsize-16.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.altform-unplated_targetsize-24.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.altform-unplated_targetsize-256.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.altform-unplated_targetsize-32.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.altform-unplated_targetsize-48.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.scale-100.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.scale-125.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.scale-150.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.scale-200.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.scale-400.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.targetsize-16.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.targetsize-24.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.targetsize-256.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.targetsize-32.png" />
+    <Content Remove="Assets\AppIcons\Square44x44Logo.targetsize-48.png" />
+    <Content Remove="Assets\AppIcons\StoreLogo.scale-100.png" />
+    <Content Remove="Assets\AppIcons\StoreLogo.scale-125.png" />
+    <Content Remove="Assets\AppIcons\StoreLogo.scale-150.png" />
+    <Content Remove="Assets\AppIcons\StoreLogo.scale-200.png" />
+    <Content Remove="Assets\AppIcons\StoreLogo.scale-400.png" />
+    <Content Remove="Assets\AppIcons\Wide310x150Logo.scale-100.png" />
+    <Content Remove="Assets\AppIcons\Wide310x150Logo.scale-125.png" />
+    <Content Remove="Assets\AppIcons\Wide310x150Logo.scale-150.png" />
+    <Content Remove="Assets\AppIcons\Wide310x150Logo.scale-200.png" />
+    <Content Remove="Assets\AppIcons\Wide310x150Logo.scale-400.png" />
   </ItemGroup>
   <ItemGroup>
-    <Page Update="pages\DownloadPage.xaml">
+    <Page Update="Views\Pages\DownloadPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\AddonsPage.xaml">
+    <Page Update="Views\Pages\AddonsPage\AddonsPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\BackupPage.xaml">
+    <Page Update="Views\Pages\BackupPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\HomePage.xaml">
+    <Page Update="Views\Pages\Home\HomePage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\ProjectPage.xaml">
+    <Page Update="Views\Pages\Projects\ProjectPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\RestorePage.xaml">
+    <Page Update="Views\Pages\RestorePage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\SyncPage.xaml">
+    <Page Update="Views\Pages\SyncPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="Controls\CreateProjectDialogContent.xaml">
+    <Page Update="Views\Dialogs\CreateProjectDialogContent.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="Controls\EditProjectDialogContent.xaml">
+    <Page Update="Views\Dialogs\EditProjectDialogContent.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\ProjectDetailPage.xaml">
+    <Page Update="Views\Pages\ProjectDetailPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\ReferenceBoard.xaml">
+    <Page Update="Views\Pages\ReferenceBoard\ReferenceBoard.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\ReferenceBoardStyles.xaml">
+    <Page Update="Views\Pages\ReferenceBoard\ReferenceBoardStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="pages\SplashScreenPage.xaml">
+    <Page Update="Views\Pages\SplashScreenPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

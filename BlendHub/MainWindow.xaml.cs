@@ -240,5 +240,301 @@ namespace BlendHub
                 ContentFrameInternal.Navigate(pageType, parameter);
             }
         }
+
+        private void TestButton2Click(object sender, RoutedEventArgs e)
+        {
+            TestButton2TeachingTip.IsOpen = true;
+        }
+
+        // Download logic properties
+        private System.Threading.CancellationTokenSource? _downloadCts;
+        private bool _isDownloading = false;
+        private bool _isPaused = false;
+        private string _downloadUrl = string.Empty;
+        private string _downloadFilename = string.Empty;
+        private Windows.Storage.StorageFile? _destinationFile;
+        private long _totalBytesRead = 0;
+        private long _contentLength = 0;
+        private string _downloadedFilePath = string.Empty;
+        private static readonly System.Net.Http.HttpClient _httpClient = new();
+
+        public string ActiveDownloadFilename => _downloadFilename;
+        public bool IsCurrentlyDownloading => _isDownloading;
+
+        public async System.Threading.Tasks.Task DownloadFileAsync(string url, string filename)
+        {
+            _downloadUrl = url;
+            _downloadFilename = filename;
+            _totalBytesRead = 0;
+            _contentLength = 0;
+            _isPaused = false;
+
+            try
+            {
+                _isDownloading = true;
+                TriggerUIRefresh();
+
+                // Get Downloads folder
+                var downloadsFolder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "\\Downloads");
+
+                // Create destination file with .tmp suffix
+                _destinationFile = await downloadsFolder.CreateFileAsync(filename + ".tmp", Windows.Storage.CreationCollisionOption.GenerateUniqueName);
+
+                // Open TeachingTip
+                TestButton2TeachingTip.IsOpen = true;
+
+                // Update UI state
+                NotificationEmptyState.Visibility = Visibility.Collapsed;
+                NotificationActivePanel.Visibility = Visibility.Visible;
+                NotificationCompletionPanel.Visibility = Visibility.Collapsed;
+                 NotificationPauseResumeIcon.Glyph = "\uE769"; // Pause glyph
+                 ToolTipService.SetToolTip(NotificationPauseResumeBtn, "Pause");
+                NotificationPauseResumeBtn.IsEnabled = true;
+                NotificationDeleteDownloadBtn.IsEnabled = true;
+                NotificationProgressBar.Value = 0;
+                NotificationFilenameText.Text = filename;
+                NotificationProgressText.Text = "Starting download...";
+
+                // Start active download stream
+                await StartDownloadStreamAsync();
+            }
+            catch (Exception ex)
+            {
+                ShowDownloadError(ex.Message);
+            }
+        }
+
+        private async System.Threading.Tasks.Task StartDownloadStreamAsync()
+        {
+            if (string.IsNullOrEmpty(_downloadUrl) || _destinationFile == null) return;
+
+            _downloadCts = new System.Threading.CancellationTokenSource();
+            var token = _downloadCts.Token;
+
+            try
+            {
+                var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, _downloadUrl);
+
+                if (_totalBytesRead > 0)
+                {
+                    request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(_totalBytesRead, null);
+                }
+
+                using var response = await _httpClient.SendAsync(request, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, token);
+
+                if (_totalBytesRead > 0)
+                {
+                    if (response.StatusCode != System.Net.HttpStatusCode.PartialContent)
+                    {
+                        _totalBytesRead = 0;
+                    }
+                }
+                else
+                {
+                    response.EnsureSuccessStatusCode();
+                }
+
+                if (_totalBytesRead == 0)
+                {
+                    _contentLength = response.Content.Headers.ContentLength ?? 0;
+                }
+                else
+                {
+                    if (response.Content.Headers.ContentRange?.Length.HasValue == true)
+                    {
+                        _contentLength = response.Content.Headers.ContentRange.Length.Value;
+                    }
+                    else if (response.Content.Headers.ContentLength.HasValue)
+                    {
+                        _contentLength = _totalBytesRead + response.Content.Headers.ContentLength.Value;
+                    }
+                }
+
+                using var contentStream = await response.Content.ReadAsStreamAsync(token);
+
+                using var fileStream = await _destinationFile.OpenStreamForWriteAsync();
+                if (_totalBytesRead > 0)
+                {
+                    fileStream.Seek(_totalBytesRead, SeekOrigin.Begin);
+                }
+                else
+                {
+                    fileStream.SetLength(0);
+                }
+
+                var buffer = new byte[8192];
+                var lastProgressUpdate = -1;
+                var lastProgressUpdateBytes = 0L;
+                int bytesRead;
+
+                while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, token)) > 0)
+                {
+                    await fileStream.WriteAsync(buffer, 0, bytesRead, token);
+                    _totalBytesRead += bytesRead;
+
+                    var progress = _contentLength > 0 ? (double)_totalBytesRead / _contentLength : 0;
+                    var progressPercent = (int)(progress * 100);
+
+                    if (_totalBytesRead - lastProgressUpdateBytes >= 512 * 1024 || progressPercent > lastProgressUpdate)
+                    {
+                        lastProgressUpdate = progressPercent;
+                        lastProgressUpdateBytes = _totalBytesRead;
+
+                        DispatcherQueue.TryEnqueue(() =>
+                        {
+                            if (!_isPaused && _isDownloading)
+                            {
+                                NotificationProgressBar.Value = progressPercent;
+                                string sizeText = _contentLength > 0 ? $"of {FormatBytes(_contentLength)}" : "";
+                                string percentText = _contentLength > 0 ? $"({progressPercent}%)" : "";
+                                NotificationProgressText.Text = $"{FormatBytes(_totalBytesRead)} {sizeText} {percentText}".Trim();
+                            }
+                        });
+                    }
+                }
+
+                await fileStream.FlushAsync(token);
+
+                // Download completed successfully
+                DispatcherQueue.TryEnqueue(async () =>
+                {
+                    _isDownloading = false;
+                    TriggerUIRefresh();
+
+                    try
+                    {
+                        var downloadsFolder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(
+                            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "\\Downloads");
+
+                        string finalFilename = _downloadFilename;
+                        await _destinationFile.RenameAsync(finalFilename, Windows.Storage.NameCollisionOption.ReplaceExisting);
+                        _downloadedFilePath = Path.Combine(downloadsFolder.Path, finalFilename);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[MainWindow] Failed to rename completed download: {ex.Message}");
+                        _downloadedFilePath = _destinationFile.Path;
+                    }
+
+                    NotificationProgressText.Text = "Download complete.";
+                    NotificationProgressBar.Value = 100;
+                    NotificationPauseResumeBtn.IsEnabled = false;
+                    NotificationDeleteDownloadBtn.IsEnabled = false;
+                    NotificationCompletionPanel.Visibility = Visibility.Visible;
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                // Download was paused or cancelled
+            }
+            catch (Exception ex)
+            {
+                ShowDownloadError(ex.Message);
+            }
+        }
+
+        private void ShowDownloadError(string message)
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                _isDownloading = false;
+                TriggerUIRefresh();
+                NotificationProgressBar.Value = 0;
+                NotificationProgressText.Text = $"Download failed: {message}";
+                NotificationPauseResumeBtn.IsEnabled = false;
+            });
+        }
+
+        private string FormatBytes(long bytes)
+        {
+            return BlendHub.Helpers.FormatHelper.FormatBytes(bytes);
+        }
+
+        private async void NotificationPauseResumeBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isPaused)
+            {
+                _isPaused = false;
+                NotificationPauseResumeIcon.Glyph = "\uE769";
+                ToolTipService.SetToolTip(NotificationPauseResumeBtn, "Pause");
+                NotificationProgressText.Text = $"Resuming download...";
+
+                TriggerUIRefresh();
+                await StartDownloadStreamAsync();
+            }
+            else
+            {
+                _isPaused = true;
+                NotificationPauseResumeIcon.Glyph = "\uE8E5";
+                ToolTipService.SetToolTip(NotificationPauseResumeBtn, "Resume");
+                NotificationProgressText.Text = $"Paused: {FormatBytes(_totalBytesRead)} of {FormatBytes(_contentLength)}";
+
+                TriggerUIRefresh();
+                _downloadCts?.Cancel();
+            }
+        }
+
+        private async void NotificationDeleteDownloadBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _isDownloading = false;
+            _isPaused = false;
+            _downloadCts?.Cancel();
+            TriggerUIRefresh();
+
+            NotificationEmptyState.Visibility = Visibility.Visible;
+            NotificationActivePanel.Visibility = Visibility.Collapsed;
+
+            try
+            {
+                if (_destinationFile != null)
+                {
+                    await _destinationFile.DeleteAsync(Windows.Storage.StorageDeleteOption.PermanentDelete);
+                }
+            }
+            catch { }
+
+            _destinationFile = null;
+            _totalBytesRead = 0;
+            _contentLength = 0;
+        }
+
+        private void NotificationOpenInstallerBtn_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(_downloadedFilePath) && File.Exists(_downloadedFilePath))
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = _downloadedFilePath, UseShellExecute = true });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainWindow] Failed to open installer: {ex.Message}");
+            }
+        }
+
+        private void NotificationOpenFolderBtn_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(_downloadedFilePath))
+                {
+                    var folderPath = Path.GetDirectoryName(_downloadedFilePath);
+                    if (folderPath != null && Directory.Exists(folderPath))
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", folderPath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainWindow] Failed to open download folder: {ex.Message}");
+            }
+        }
+
+        private void TriggerUIRefresh()
+        {
+        }
     }
 }

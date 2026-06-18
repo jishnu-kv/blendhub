@@ -1,0 +1,199 @@
+<Page
+    x:Class="BlendHub.Pages.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:BlendHub.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
+    xmlns:services="using:BlendHub.Services"
+    xmlns:custom="using:BlendHub.Controls"
+    xmlns:models="using:BlendHub.Models"
+    mc:Ignorable="d">
+    <Page.Resources>
+        <Style x:Key="QuickActionButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="12,16" />
+            <Setter Property="MinHeight" Value="132" />
+            <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+        </Style>
+
+        <DataTemplate x:Key="QuickActionTemplate" x:DataType="local:QuickActionItem">
+            <Button Style="{StaticResource QuickActionButtonStyle}"
+                    Click="QuickAction_Click"
+                    AutomationProperties.AutomationId="{x:Bind AutomationId}"
+                    AutomationProperties.Name="{x:Bind Title}">
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <Grid Width="44" Height="44" HorizontalAlignment="Center">
+                        <Border CornerRadius="22" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
+                        <FontIcon Glyph="{x:Bind Glyph}" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBlock Text="{x:Bind Title}" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" FontSize="13" />
+                    <TextBlock Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" TextWrapping="Wrap" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="36,36,36,12" ColumnDefinitions="*, Auto" RowSpacing="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Text="Dashboard"
+                       Style="{StaticResource TitleTextBlockStyle}"
+                       AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock Grid.Row="1"
+                       Text="Manage Blender versions, addons, backups, and recent projects."
+                       Style="{StaticResource BodyTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="36,16,36,0">
+            <StackPanel Spacing="28">
+                <!-- Quick Actions -->
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Quick Actions" Style="{StaticResource BodyLargeStrongTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" />
+                    <Grid ColumnSpacing="12" RowSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <ContentControl Grid.Column="0" Content="{x:Bind QuickActions[0]}" ContentTemplate="{StaticResource QuickActionTemplate}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                        <ContentControl Grid.Column="1" Content="{x:Bind QuickActions[1]}" ContentTemplate="{StaticResource QuickActionTemplate}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                        <ContentControl Grid.Column="2" Content="{x:Bind QuickActions[2]}" ContentTemplate="{StaticResource QuickActionTemplate}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                        <ContentControl Grid.Column="3" Content="{x:Bind QuickActions[3]}" ContentTemplate="{StaticResource QuickActionTemplate}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                    </Grid>
+                </StackPanel>
+
+                <!-- Installed Versions -->
+                <Border CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <!-- Container Header -->
+                        <Grid ColumnDefinitions="*, Auto" Padding="16,16,16,16">
+                            <TextBlock Text="Installed Blender Versions" Style="{StaticResource BodyLargeStrongTextBlockStyle}" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" />
+                            <Button Grid.Column="1" Click="RefreshButton_Click" Style="{StaticResource SubtleButtonStyle}" ToolTipService.ToolTip="Refresh" AutomationProperties.AutomationId="BtnRefreshVersions" AutomationProperties.Name="Refresh Versions">
+                                <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                            </Button>
+                        </Grid>
+
+                        <!-- Divider line -->
+                        <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" />
+
+                        <!-- Versions ListView -->
+                        <ListView x:Name="VersionsGridView" ItemsSource="{x:Bind BlenderVersions, Mode=OneWay}" SelectionMode="None" HorizontalAlignment="Stretch" Padding="0,0,0,1" AutomationProperties.AutomationId="ListVersions" AutomationProperties.Name="Installed Blender Versions">
+                            <ListView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <ItemsStackPanel Orientation="Vertical" CacheLength="2" />
+                                </ItemsPanelTemplate>
+                            </ListView.ItemsPanel>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="MinHeight" Value="0"/>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="services:BlenderVersionInfo">
+                                    <StackPanel>
+                                        <Grid ColumnDefinitions="Auto, *, Auto" Padding="16,16,16,16">
+                                            <!-- Column 0: Logo -->
+                                            <Image Grid.Column="0" Source="/Assets/blender_logo.png" Width="24" Height="24" Margin="0,0,16,0" VerticalAlignment="Center" />
+
+                                            <!-- Column 1: Info -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                                                <TextBlock Text="{x:Bind DisplayName}" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                                                <TextBlock Text="{x:Bind ExecutablePath}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+
+                                            <!-- Column 2: Actions -->
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                <!-- Launch Button with icon -->
+                                                <Button Click="OpenVersion_Click" Style="{StaticResource DefaultButtonStyle}" Padding="12,4" Height="32" AutomationProperties.AutomationId="BtnLaunchVersion" AutomationProperties.Name="Launch">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <FontIcon Glyph="&#xE8A7;" FontSize="14" />
+                                                        <TextBlock Text="Launch" Style="{StaticResource BodyTextBlockStyle}" />
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <!-- Open Config Folder Button -->
+                                                <Button Click="OpenConfigFolder_Click" Style="{StaticResource DefaultButtonStyle}" Width="32" Height="32" Padding="0" ToolTipService.ToolTip="Open Config Folder" AutomationProperties.AutomationId="BtnOpenConfigFolder" AutomationProperties.Name="Open Config Folder">
+                                                    <FontIcon Glyph="&#xEC25;" FontSize="14" />
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                        <!-- Divider line between rows -->
+                                        <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Visibility="{x:Bind ShowDivider, Converter={StaticResource BooleanToVisibilityConverter}}" Opacity="0.6"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <Grid x:Name="NoVersionsPanel" MinHeight="120" Visibility="Collapsed" Padding="16">
+                            <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE946;" FontSize="28" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                <TextBlock Text="No Blender installations found" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextAlignment="Center" />
+                                <TextBlock Text="Refresh detection or add a custom Blender executable in Settings." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Recent Projects Section -->
+                <StackPanel Spacing="16" Margin="0,0,0,16">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <TextBlock Text="Recent Projects" Style="{StaticResource BodyLargeStrongTextBlockStyle}" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" />
+                        <Button Grid.Column="1" Click="ViewAllProjects_Click" Style="{StaticResource SubtleButtonStyle}" ToolTipService.ToolTip="View All Projects" AutomationProperties.AutomationId="BtnViewAllProjects" AutomationProperties.Name="View All Projects">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="View All" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                                <FontIcon Glyph="&#xE72A;" FontSize="12" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <ListView x:Name="RecentProjectsList" ItemsSource="{x:Bind RecentProjects, Mode=OneWay}" SelectionMode="None" HorizontalAlignment="Stretch" AutomationProperties.AutomationId="ListRecentProjects" AutomationProperties.Name="Recent Projects">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0"/>
+                                <Setter Property="MinHeight" Value="0"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:Project">
+                                <custom:ProjectCardView Project="{x:Bind}" />
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <!-- Empty state for recent projects -->
+                    <Grid x:Name="NoRecentProjectsPanel" MinHeight="180" Padding="24,32" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Visibility="Collapsed">
+                        <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE7C3;" FontSize="36" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                            <TextBlock Text="No recent projects" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextAlignment="Center" />
+                            <TextBlock Text="Create or import a Blender project to see it here." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" Margin="0,-8,0,0" />
+                            <Button Content="Create Project" Style="{StaticResource AccentButtonStyle}" Click="ViewAllProjects_Click" HorizontalAlignment="Center" Margin="0,8,0,0" AutomationProperties.AutomationId="BtnCreateProjectEmpty" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

@@ -11,7 +11,7 @@
             <converters:StringToBoolConverter x:Key="StringToBoolConverter" />
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
-            <FontFamily x:Key="SymbolThemeFontFamily">Segoe Fluent Icons, ms-appx:///Assets/Font/Segoe Fluent Icons.ttf#Segoe Fluent Icons</FontFamily>
+            <FontFamily x:Key="SymbolThemeFontFamily">Segoe Fluent Icons, ms-appx:///Assets/Fonts/Segoe Fluent Icons.ttf#Segoe Fluent Icons</FontFamily>
             
             <!-- Shared DataTemplate for grouped ConfigItemViewModel items -->
             <DataTemplate x:Key="GroupedConfigItemsTemplate">
@@ -36,8 +36,9 @@
             
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
-                <ResourceDictionary Source="ReferenceBoard/ReferenceBoardStyles.xaml" />
-                <ResourceDictionary Source="Icons.xaml" />
+                <ResourceDictionary Source="Views/Pages/ReferenceBoard/ReferenceBoardStyles.xaml" />
+                <ResourceDictionary Source="Assets/Styles/Icons.xaml" />
+                <ResourceDictionary Source="Assets/Styles/Navigation.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

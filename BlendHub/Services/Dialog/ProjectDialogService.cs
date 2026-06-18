@@ -1,0 +1,230 @@
+using BlendHub.Models;
+using BlendHub.Pages;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using System;
+using BlendHub.Controls;
+using BlendHub.Dialogs;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace BlendHub.Services
+{
+    public class ProjectDialogService
+    {
+        public static async Task ShowDeleteConfirmAsync(Project project, XamlRoot xamlRoot, Action? onSuccess = null)
+        {
+            var deleteFilesCheckBox = new CheckBox
+            {
+                Content = "Move project folder and all its contents to Recycle Bin",
+                Margin = new Thickness(0, 12, 0, 0),
+                FontSize = 13
+            };
+
+            var contentStack = new StackPanel { Spacing = 4, Margin = new Thickness(0, 4, 0, 0) };
+            contentStack.Children.Add(new TextBlock
+            {
+                Text = $"Are you sure you want to remove '{project.Name}' from your recent projects? This action will remove it from the list.",
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 14
+            });
+            contentStack.Children.Add(deleteFilesCheckBox);
+
+            var confirmDialog = new ContentDialog
+            {
+                Title = "Remove Project?",
+                Content = contentStack,
+                PrimaryButtonText = "Remove",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.None,
+                XamlRoot = xamlRoot,
+                Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                RequestedTheme = (App.MainWindow.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default,
+                CloseButtonStyle = Application.Current.Resources["DefaultButtonStyle"] as Style
+            };
+
+            var result = await confirmDialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                // Physical deletion if requested
+                if (deleteFilesCheckBox.IsChecked == true && !string.IsNullOrEmpty(project.Path))
+                {
+                    try
+                    {
+                        if (Directory.Exists(project.Path))
+                        {
+                            await Task.Run(() =>
+                            {
+                                Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(
+                                    project.Path,
+                                    Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                                    Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[ProjectDialogService] Error moving folder to recycle bin: {ex.Message}");
+
+                        var errorDialog = new ContentDialog
+                        {
+                            Title = "Deletion Failed",
+                            Content = $"Could not move the folder to Recycle Bin. It might be in use by another program.\n\nError: {ex.Message}",
+                            CloseButtonText = "OK",
+                            XamlRoot = xamlRoot,
+                            Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                            RequestedTheme = (App.MainWindow.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default
+                        };
+                        await errorDialog.ShowAsync();
+                    }
+                }
+
+                // Remove from data source
+                ProjectService.RemoveProject(project);
+
+                // Callback for UI refresh
+                onSuccess?.Invoke();
+            }
+        }
+
+        public static async Task ShowEditDialogAsync(Project project, XamlRoot xamlRoot, Action? onSuccess = null)
+        {
+            var content = new EditProjectDialogContent(project);
+            var dialog = new ContentDialog
+            {
+                Title = $"Edit: {project.Name}",
+                Content = content,
+                PrimaryButtonText = "Save Changes",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = xamlRoot,
+                Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                RequestedTheme = (App.MainWindow.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default,
+                CloseButtonStyle = Application.Current.Resources["DefaultButtonStyle"] as Style
+            };
+
+            dialog.IsPrimaryButtonEnabled = content.IsValid;
+            content.ValidationChanged += (s, args) => { dialog.IsPrimaryButtonEnabled = content.IsValid; };
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                project.AutoUpdatePrimaryBlend = content.AutoUpdatePrimaryBlend;
+
+                if (content.SelectedVersion != null && !string.IsNullOrEmpty(content.SelectedVersion.Version))
+                    project.BlenderVersion = content.SelectedVersion.Version;
+
+                if (!string.IsNullOrEmpty(content.BlendFileName))
+                    project.BlendFileName = content.BlendFileName;
+
+                project.Subfolders = content.Folders.Select(f => f.Name).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+                project.FileLaunchers = content.Launchers
+                    .Where(l => !string.IsNullOrWhiteSpace(l.Extension) && !string.IsNullOrWhiteSpace(l.ProgramPath))
+                    .GroupBy(l => l.Extension.ToLowerInvariant())
+                    .ToDictionary(g => g.Key, g => g.First().ProgramPath);
+
+                // Run auto-update check immediately if turned on
+                if (project.AutoUpdatePrimaryBlend)
+                {
+                    ProjectService.AutoUpdateProjectPrimaryBlendFile(project);
+                }
+
+                // Save to data source
+                ProjectService.UpdateProject(project);
+
+                // Callback for UI refresh
+                onSuccess?.Invoke();
+            }
+        }
+
+        public static async Task ShowUpdateProgressDialogAsync(Project project, XamlRoot xamlRoot, Action? onSuccess = null)
+        {
+            var slider = new Slider
+            {
+                Minimum = 0,
+                Maximum = 100,
+                Value = project.CompletionProgress,
+                Header = "Project Progress",
+                TickFrequency = 10,
+                TickPlacement = Microsoft.UI.Xaml.Controls.Primitives.TickPlacement.Outside,
+                Margin = new Thickness(0, 12, 0, 12)
+            };
+
+            var progressText = new TextBlock
+            {
+                Text = $"{project.CompletionProgress}%",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var progressBar = new ProgressBar
+            {
+                Minimum = 0,
+                Maximum = 100,
+                Value = project.CompletionProgress,
+                Height = 8,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+
+            slider.ValueChanged += (s, e) =>
+            {
+                progressBar.Value = e.NewValue;
+                progressText.Text = $"{(int)e.NewValue}%";
+            };
+
+            var headerGrid = new Grid();
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            
+            var titleText = new TextBlock 
+            { 
+                Text = "Current Completion:", 
+                Style = Application.Current.Resources["BodyStrongTextBlockStyle"] as Style 
+            };
+            Grid.SetColumn(titleText, 0);
+            Grid.SetColumn(progressText, 1);
+            headerGrid.Children.Add(titleText);
+            headerGrid.Children.Add(progressText);
+
+            var showProgressCheckBox = new CheckBox
+            {
+                Content = "Show progress bar on project card",
+                IsChecked = project.ShowProgress,
+                Margin = new Thickness(0, 4, 0, 8),
+                FontSize = 13
+            };
+
+            var contentStack = new StackPanel { Spacing = 8, Margin = new Thickness(0, 8, 0, 0), Width = 300 };
+            contentStack.Children.Add(slider);
+            contentStack.Children.Add(headerGrid);
+            contentStack.Children.Add(progressBar);
+            contentStack.Children.Add(showProgressCheckBox);
+
+            var dialog = new ContentDialog
+            {
+                Title = $"Update Progress: {project.Name}",
+                Content = contentStack,
+                PrimaryButtonText = "Save",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = xamlRoot,
+                Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style,
+                RequestedTheme = (App.MainWindow.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default,
+                CloseButtonStyle = Application.Current.Resources["DefaultButtonStyle"] as Style
+            };
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                project.CompletionProgress = (int)slider.Value;
+                project.ShowProgress = showProgressCheckBox.IsChecked == true;
+                ProjectService.UpdateProject(project);
+                onSuccess?.Invoke();
+            }
+        }
+    }
+}
+

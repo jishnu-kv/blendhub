@@ -1,0 +1,774 @@
+<UserControl
+    x:Class="BlendHub.Controls.ProjectCardView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:BlendHub.Controls"
+    xmlns:models="using:BlendHub.Models"
+    xmlns:pages="using:BlendHub.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
+    xmlns:ui="using:CommunityToolkit.WinUI"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ms-appx:///CommunityToolkit.WinUI.Controls.SettingsControls/SettingsCard/SettingsCard.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+        <!-- ========================================
+		     FOLDER HEADER TEMPLATE
+		     ======================================== -->
+        <DataTemplate x:Key="FolderHeaderTemplate" x:DataType="models:FolderViewModel">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="24" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Expand/Collapse Icon -->
+                <FontIcon Glyph="{x:Bind ExpandIcon, Mode=OneWay}"
+                          FontSize="10"
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+
+                <!-- Folder Icon -->
+                <Image Grid.Column="1"
+                       Source="{x:Bind FolderIcon, Mode=OneWay}"
+                       Width="20"
+                       Height="20"
+                       VerticalAlignment="Center" />
+
+                <!-- Folder Name -->
+                <TextBlock Grid.Column="2"
+                           Text="{x:Bind Name}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+
+                <!-- Item Count -->
+                <TextBlock Grid.Column="3"
+                           Text="{x:Bind ItemCountText}"
+                           FontSize="12"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0" />
+            </Grid>
+        </DataTemplate>
+
+        <!-- ========================================
+		     FILE TEMPLATE
+		     ======================================== -->
+        <DataTemplate x:Key="FileTemplate"
+                      x:DataType="models:FileViewModel">
+            <Grid Padding="0,4"
+                  DoubleTapped="FileItem_DoubleTapped"
+                  Background="Transparent"
+                  AutomationProperties.Name="{x:Bind Name}">
+                <Grid.ContextFlyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem Text="Open File"
+                                        Click="OpenFile_Click"
+                                        Tag="{x:Bind FullPath}">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE8A7;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Text="Open Folder"
+                                        Click="OpenContainingFolder_Click"
+                                        Tag="{x:Bind FullPath}">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE8DA;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Delete"
+                                        Click="DeleteFile_Click"
+                                        Tag="{x:Bind FullPath}"
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE74D;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Grid.ContextFlyout>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="200" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="20" Height="20" Margin="0,0,12,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image Source="{x:Bind IconSource, Mode=OneWay}"
+                           Stretch="Uniform"
+                           Visibility="{x:Bind IconVisibility, Mode=OneWay}" />
+                    <FontIcon Glyph="&#xE8A5;"
+                              FontSize="16"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                              Visibility="{x:Bind FallbackIconVisibility, Mode=OneWay}" />
+                </Grid>
+                <TextBlock Grid.Column="1"
+                           Text="{x:Bind Name}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="2"
+                           Text="{x:Bind ModifiedDateText}"
+                           FontSize="13"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           VerticalAlignment="Center"
+                           Margin="12,0"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="3"
+                           Text="{x:Bind SizeText}"
+                           FontSize="13"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
+                           TextTrimming="CharacterEllipsis" />
+            </Grid>
+        </DataTemplate>
+
+        <!-- ========================================
+		     FOLDER TEMPLATE
+		     ======================================== -->
+        <DataTemplate x:Key="FolderTemplate"
+                      x:DataType="models:FolderViewModel">
+            <StackPanel Margin="0">
+                <Button Click="FolderHeader_Click"
+                        Tag="{x:Bind}"
+                        Style="{StaticResource SubtleButtonStyle}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        Content="{x:Bind}"
+                        ContentTemplate="{StaticResource FolderHeaderTemplate}"
+                        Padding="8,6">
+                    <Button.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="Open Folder"
+                                            Click="OpenContainingFolder_Click"
+                                            Tag="{x:Bind FullPath}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE8DA;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="Delete"
+                                            Click="DeleteFile_Click"
+                                            Tag="{x:Bind FullPath}"
+                                            Foreground="{ThemeResource SystemFillColorCriticalBrush}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE74D;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </Button.ContextFlyout>
+                </Button>
+
+                <ItemsControl ItemsSource="{x:Bind Subfolders}"
+                              Visibility="{x:Bind ContentVisibility, Mode=OneWay}"
+                              Padding="24,0,0,0"
+                              Margin="24,4,0,0"
+                              HorizontalContentAlignment="Stretch">
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="HorizontalAlignment" Value="Stretch" />
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ContentControl Content="{Binding}"
+                                            ContentTemplate="{StaticResource FolderTemplate}"
+                                            HorizontalContentAlignment="Stretch"
+                                            HorizontalAlignment="Stretch" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ListView ItemsSource="{x:Bind FilesOnly}"
+                          ItemTemplate="{StaticResource FileTemplate}"
+                          SelectionMode="Single"
+                          IsItemClickEnabled="True"
+                          Visibility="{x:Bind ContentVisibility, Mode=OneWay}"
+                          Padding="24,0,0,0"
+                          Margin="0"
+                          BorderThickness="0"
+                          ToolTipService.ToolTip="Double-click any file to open it directly. Right-click or use the actions button for more options!">
+                </ListView>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- ========================================
+		     NOTE TEMPLATE
+		     ======================================== -->
+        <DataTemplate x:Key="NoteTemplate">
+            <toolkit:SettingsCard Margin="0,0,0,4"
+                                  Header="{Binding Heading}"
+                                  Description="{Binding Content}"
+                                  HeaderIcon="{ui:FontIcon Glyph=&#xE70B;}">
+                <Button Style="{StaticResource SubtleButtonStyle}" Padding="6" Width="32" Height="32">
+                    <FontIcon Glyph="&#xE712;" FontSize="13" />
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="Edit" Icon="Edit" Click="EditItem_Click" Tag="{Binding}" />
+                            <MenuFlyoutItem Text="Delete" Icon="Delete" Click="DeleteItem_Click" Tag="{Binding}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </toolkit:SettingsCard>
+        </DataTemplate>
+
+        <!-- ========================================
+		     PROJECT FILE CARD TEMPLATE
+		     ======================================== -->
+        <DataTemplate x:Key="ProjectFileTemplate">
+            <Grid Padding="0,2" AutomationProperties.Name="{Binding Name}" DoubleTapped="ProjectFileItem_DoubleTapped" Background="Transparent" HorizontalAlignment="Stretch"
+                  ToolTipService.ToolTip="Double-click any file to open it directly. Right-click or use the actions button for more options!">
+                <Grid.ContextFlyout>
+                    <MenuFlyout Opening="FileMenuFlyout_Opening" />
+                </Grid.ContextFlyout>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48"/>
+                    <ColumnDefinition Width="2.5*" />
+                    <ColumnDefinition Width="1.5*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1.5*" />
+                    <ColumnDefinition Width="80" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Column 0: Thumbnail -->
+                <Grid Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image Source="ms-appx:///Assets/blender_logo.png"
+                           Height="16"
+                           Stretch="Uniform"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                </Grid>
+
+                <!-- Column 1: Name -->
+                <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}"
+                           HorizontalAlignment="Left" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+
+                <!-- Column 2: Blender Version -->
+                <TextBlock Grid.Column="2" Text="{Binding ProgramName}" Visibility="{Binding ProgramNameVisibility}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+
+                <!-- Column 3: Size -->
+                <TextBlock Grid.Column="3" Text="{Binding Size}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+
+                <!-- Column 4: Modified -->
+                <TextBlock Grid.Column="4" Text="{Binding Modified}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+
+                <!-- Column 5: Actions -->
+                <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                    <Button Style="{StaticResource SubtleButtonStyle}" Padding="6" Height="32" Width="32" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE712;" FontSize="12" />
+                        <Button.Flyout>
+                            <MenuFlyout Opening="FileMenuFlyout_Opening" />
+                        </Button.Flyout>
+                    </Button>
+                    <Button Click="RemoveCustomFileBtn_Click"
+                            Tag="{Binding}"
+                            Visibility="{Binding CustomFileVisibility}"
+                            Padding="6,4">
+                        <FontIcon Glyph="&#xE711;" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <!-- ========================================
+		     LAUNCHER FILE CARD TEMPLATE (no Blender Version column)
+		     ======================================== -->
+        <DataTemplate x:Key="LauncherFileTemplate">
+            <Grid Padding="0,2" AutomationProperties.Name="{Binding Name}" Tag="Launcher" DoubleTapped="ProjectFileItem_DoubleTapped" Background="Transparent" HorizontalAlignment="Stretch"
+                  ToolTipService.ToolTip="Double-click any file to open it directly. Right-click or use the actions button for more options!">
+                <Grid.ContextFlyout>
+                    <MenuFlyout Opening="FileMenuFlyout_Opening" />
+                </Grid.ContextFlyout>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48"/>
+                    <ColumnDefinition Width="2.5*" />
+                    <ColumnDefinition Width="1.5*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1.5*" />
+                    <ColumnDefinition Width="80" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Column 0: Thumbnail -->
+                <Grid Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image Source="{Binding IconSource}"
+                           Height="16"
+                           Stretch="Uniform"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding IconVisibility}" />
+                    <FontIcon Glyph="&#xE8A5;"
+                              FontSize="18"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Visibility="{Binding FallbackIconVisibility}" />
+                </Grid>
+
+                <!-- Column 1: Name -->
+                <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}"
+                           HorizontalAlignment="Left" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+
+                <!-- Column 2: Program/Launcher -->
+                <TextBlock Grid.Column="2" Text="{Binding ProgramName}" Visibility="{Binding ProgramNameVisibility}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+
+                <!-- Column 3: Size -->
+                <TextBlock Grid.Column="3" Text="{Binding Size}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+
+                <!-- Column 4: Modified -->
+                <TextBlock Grid.Column="4" Text="{Binding Modified}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+
+                <!-- Column 5: Actions -->
+                <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                    <Button Style="{StaticResource SubtleButtonStyle}" Padding="6" Height="32" Width="32" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE712;" FontSize="12" />
+                        <Button.Flyout>
+                            <MenuFlyout Opening="FileMenuFlyout_Opening" />
+                        </Button.Flyout>
+                    </Button>
+                    <Button Click="RemoveCustomFileBtn_Click"
+                            Tag="{Binding}"
+                            Visibility="{Binding CustomFileVisibility}"
+                            Padding="6,4">
+                        <FontIcon Glyph="&#xE711;" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <!-- ========================================
+		     TODO TEMPLATE
+		     ======================================== -->
+        <DataTemplate x:Key="TodoTemplate">
+            <toolkit:SettingsCard Margin="0,0,0,4" MinHeight="66">
+                <toolkit:SettingsCard.Header>
+                    <Grid ColumnSpacing="12" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox Grid.Column="0"
+                                  IsChecked="{Binding IsCompleted, Mode=TwoWay}"
+                                  Click="TaskCheckBox_Click"
+                                  Tag="{Binding}"
+                                  VerticalAlignment="Center"
+                                  MinWidth="0"
+                                  Margin="0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="{Binding Heading}" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Content}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Visibility="{Binding ContentVisibility}" />
+                        </StackPanel>
+                    </Grid>
+                </toolkit:SettingsCard.Header>
+                <Button Style="{StaticResource SubtleButtonStyle}" Padding="6" Width="32" Height="32" VerticalAlignment="Center">
+                    <FontIcon Glyph="&#xE712;" FontSize="13" />
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="Edit" Icon="Edit" Click="EditItem_Click" Tag="{Binding}" />
+                            <MenuFlyoutItem Text="Delete" Icon="Delete" Click="DeleteItem_Click" Tag="{Binding}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </toolkit:SettingsCard>
+        </DataTemplate>
+        
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Expander x:Name="CardExpander"
+              MinHeight="74"
+              Margin="0,0,0,2"
+              CornerRadius="4"
+              Opacity="{x:Bind GetOpacity(Project.FolderExists), Mode=OneWay}"
+              HorizontalAlignment="Stretch"
+              HorizontalContentAlignment="Stretch">
+
+        <Expander.Header>
+            <Grid HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Column="0" ColumnSpacing="16" IsHitTestVisible="False">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Thumbnail -->
+                    <Grid Grid.Column="0" Width="48" Height="48" VerticalAlignment="Center">
+                        <Border CornerRadius="8"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Background="{ThemeResource SystemFillColorNeutralBackgroundBrush}">
+                            <Image x:Name="ThumbnailImage"
+                                   Loaded="Thumbnail_Loaded"
+                                   Stretch="Uniform" />
+                        </Border>
+                        <!-- Pinned indicator -->
+                        <Grid CornerRadius="2"
+                              Width="16"
+                              Height="16"
+                              Margin="0,1,1,0"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Top"
+                              Visibility="{x:Bind GetPinnedVisibility(Project.IsPinned), Mode=OneWay}">
+                            <Border Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}"
+                                    Opacity="0.4"
+                                    CornerRadius="4"
+                                    BorderThickness="1"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" />
+                            <FontIcon Glyph="&#xE840;" FontSize="8" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                    </Grid>
+
+                    <!-- Project Info Vertical Layout -->
+                    <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                        <!-- First: Heading -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Bind Project.Name, Mode=OneWay}"
+                                       Style="{StaticResource BodyLargeStrongTextBlockStyle}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="{x:Bind Project.StatusText, Mode=OneWay}"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
+                                       FontWeight="Normal"
+                                       VerticalAlignment="Center"
+                                       Visibility="{x:Bind GetMissingVisibility(Project.FolderExists), Mode=OneWay}" />
+                        </StackPanel>
+ 
+                        <!-- Second: Path -->
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Bind Project.Path, Mode=OneWay}"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center"
+                                       MaxWidth="380" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+ 
+                <Grid Grid.Column="1" Margin="16,0,0,0">
+                    <Button Click="LocateProject_Click"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Width="160"
+                            Visibility="{x:Bind GetMissingVisibility(Project.FolderExists), Mode=OneWay}"
+                            AutomationProperties.AutomationId="BtnLocateProject"
+                            AutomationProperties.Name="Locate Project">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8DA;" FontSize="14" />
+                            <TextBlock Text="Locate Project" />
+                        </StackPanel>
+                    </Button>
+
+                    <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" Visibility="{x:Bind GetExistsVisibility(Project.FolderExists), Mode=OneWay}">
+                        <!-- Completion Progress Bar -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" 
+                              VerticalAlignment="Center"
+                              Visibility="{x:Bind GetProgressVisibility(Project.ShowProgress), Mode=OneWay}">
+                            <ProgressBar Value="{x:Bind Project.CompletionProgress, Mode=OneWay}"
+                                         Maximum="100"
+                                         Width="140"
+                                         Height="3"
+                                         MinHeight="3"
+                                         CornerRadius="1.5"
+                                         VerticalAlignment="Center"
+                                         Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <TextBlock Text="{x:Bind GetProgressText(Project.CompletionProgress), Mode=OneWay}"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <Button Style="{StaticResource SubtleButtonStyle}" Padding="6" Width="40" Height="40" VerticalAlignment="Center" HorizontalAlignment="Center" AutomationProperties.AutomationId="BtnProjectActions" AutomationProperties.Name="Project Actions">
+                            <FontIcon Glyph="&#xE712;" FontSize="16" />
+                            <Button.Flyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="Open folder" Icon="OpenLocal" Click="OpenProjectFolderMenu_Click" />
+                                    <MenuFlyoutItem Text="Edit Project" Icon="Edit" Click="EditProjectMenu_Click" />
+                                    <MenuFlyoutItem Text="{x:Bind GetPinMenuText(Project.IsPinned), Mode=OneWay}" Click="PinProjectMenu_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="{x:Bind GetPinMenuIcon(Project.IsPinned), Mode=OneWay}" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Update Progress" Click="UpdateProgressMenu_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <ImageIcon Source="ms-appx:///Assets/icons/progress.svg" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Delete project" Icon="Delete" Click="DeleteProjectMenu_Click" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Expander.Header>
+
+        <Expander.Content>
+            <Grid RowSpacing="12" Padding="0,12,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Height="40" VerticalAlignment="Center">
+                    <toolkit:Segmented x:Name="ContentSelectorBar"
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Center"
+                                       MinHeight="32"
+                                       SelectionChanged="ContentSelectorBar_SelectionChanged"
+                                       AutomationProperties.AutomationId="SegmentedProjectCardTabs"
+                                       AutomationProperties.Name="Project Content Tabs">
+                        <toolkit:Segmented.Resources>
+                            <Style TargetType="toolkit:SegmentedItem">
+                                <Setter Property="MinHeight" Value="32" />
+                            </Style>
+                        </toolkit:Segmented.Resources>
+                        <toolkit:SegmentedItem x:Name="FilesTab" Content="Projects" Tag="Projects" Icon="{ui:FontIcon Glyph=&#xF158;}"
+                                                AutomationProperties.AutomationId="TabFiles" AutomationProperties.Name="Projects Files Tab" />
+                        <toolkit:SegmentedItem x:Name="DirectoriesTab" Content="Directories" Tag="Directories" Icon="{ui:FontIcon Glyph=&#xE8B7;}"
+                                                AutomationProperties.AutomationId="TabDirectories" AutomationProperties.Name="Directories Tab" />
+                        <toolkit:SegmentedItem x:Name="LaunchersTab" Content="Launchers" Tag="Launchers" Icon="{ui:FontIcon Glyph=&#xE7C3;}"
+                                                AutomationProperties.AutomationId="TabLaunchers" AutomationProperties.Name="Launchers Tab" />
+                        <toolkit:SegmentedItem x:Name="NotesTab" Content="Notes" Tag="Notes" Icon="{ui:FontIcon Glyph=&#xE70B;}"
+                                                AutomationProperties.AutomationId="TabNotes" AutomationProperties.Name="Notes Tab" />
+                        <toolkit:SegmentedItem x:Name="TasksTab" Content="Tasks" Tag="Tasks" Icon="{ui:FontIcon Glyph=&#xF7EC;}"
+                                                AutomationProperties.AutomationId="TabTasks" AutomationProperties.Name="Tasks Tab" />
+                    </toolkit:Segmented>
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <AutoSuggestBox x:Name="GlobalSearchBox"
+                                        PlaceholderText="Search..."
+                                        Width="240"
+                                        Height="32"
+                                        VerticalAlignment="Center"
+                                        IsEnabled="False"
+                                        QueryIcon="Find"
+                                        TextChanged="GlobalSearchBox_TextChanged"
+                                        AutomationProperties.AutomationId="SearchBoxProjectCard"
+                                        AutomationProperties.Name="Search Project Content" />
+
+                        <Button x:Name="AddNoteBtn"
+                                Visibility="Collapsed"
+                                Click="AddProjectItem_Click"
+                                Height="32"
+                                VerticalAlignment="Center"
+                                Padding="12,0"
+                                MinWidth="100"
+                                AutomationProperties.AutomationId="BtnAddProjectNote"
+                                AutomationProperties.Name="Add Note">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE70B;" FontSize="12" VerticalAlignment="Center" />
+                                <TextBlock Text="Add Item" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="AddFileBtn"
+                                Visibility="Collapsed"
+                                Click="AddCustomFile_Click"
+                                Height="32"
+                                VerticalAlignment="Center"
+                                Padding="12,0"
+                                MinWidth="100"
+                                AutomationProperties.AutomationId="BtnAddProjectFile"
+                                AutomationProperties.Name="Add Custom File">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE710;" FontSize="12" VerticalAlignment="Center" />
+                                <TextBlock Text="Add File" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="RefreshDirectoriesBtn"
+                                Visibility="Collapsed"
+                                Click="RefreshLocations_Click"
+                                Height="32"
+                                VerticalAlignment="Center"
+                                Padding="12,0"
+                                MinWidth="100"
+                                AutomationProperties.AutomationId="BtnRefreshProjectDirectories"
+                                AutomationProperties.Name="Refresh Locations">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE72C;" FontSize="12" VerticalAlignment="Center" />
+                                <TextBlock Text="Refresh" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              MaxHeight="450"
+                              Padding="0,12,0,0">
+                    <Grid>
+                        <!-- 1. Files Panel -->
+                        <Grid x:Name="FilesPanel" Visibility="Collapsed" RowSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <!-- Header Grid -->
+                            <Grid Grid.Row="0" Margin="12,4,12,4" HorizontalAlignment="Stretch">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="48" />
+                                    <ColumnDefinition Width="2.5*" />
+                                    <ColumnDefinition Width="1.5*" />
+                                    <ColumnDefinition Width="1*" />
+                                    <ColumnDefinition Width="1.5*" />
+                                    <ColumnDefinition Width="80" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
+                                <TextBlock Grid.Column="2" Text="Blender Version" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
+                                <TextBlock Grid.Column="3" Text="Size" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
+                                <TextBlock Grid.Column="4" Text="Modified" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
+                            </Grid>
+                            <!-- Separator -->
+                            <Border Grid.Row="1" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,2,0,0" />
+                            <!-- List -->
+                            <ListView x:Name="FilesListView"
+                                      Grid.Row="2"
+                                      MinWidth="550"
+                                      BorderThickness="0"
+                                      ItemsSource="{x:Bind _projectFiles, Mode=OneWay}"
+                                      ItemTemplate="{StaticResource ProjectFileTemplate}"
+                                      SelectionMode="Single"
+                                      IsItemClickEnabled="True"
+                                      CanReorderItems="True"
+                                      AllowDrop="True"
+                                      CanDragItems="True"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Stretch"
+                                      DragItemsStarting="FilesListView_DragItemsStarting"
+                                      DragOver="FilesListView_DragOver"
+                                      Drop="FilesListView_Drop" />
+                            <!-- Empty/No Results messages -->
+                            <TextBlock x:Name="FilesEmptyText" Grid.Row="3" Text="No .blend files found in the project." Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" FontSize="13" Margin="0,40,0,40" Visibility="Collapsed" />
+                            <TextBlock x:Name="FilesNoResultsText" Grid.Row="4" Text="No results found." Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" FontSize="13" Margin="0,40,0,40" Visibility="Collapsed" />
+                        </Grid>
+
+                        <!-- 2. Locations Panel -->
+                        <Grid x:Name="LocationsPanel" Visibility="Collapsed">
+                            <ItemsRepeater x:Name="LocationsRepeater"
+                                           ItemsSource="{x:Bind _locationFolders, Mode=OneWay}"
+                                           ItemTemplate="{StaticResource FolderTemplate}">
+                                <ItemsRepeater.Layout>
+                                    <StackLayout Spacing="4" />
+                                </ItemsRepeater.Layout>
+                            </ItemsRepeater>
+                            <TextBlock x:Name="LocationsEmptyText" Text="No subfolders configured" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" Margin="0,40,0,40" Visibility="Collapsed" />
+                        </Grid>
+
+                        <!-- 3. Launchers Panel -->
+                        <Grid x:Name="LaunchersPanel" Visibility="Collapsed" RowSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <!-- Header Grid -->
+                            <Grid Grid.Row="0" Margin="12,4,12,4" HorizontalAlignment="Stretch">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="48" />
+                                    <ColumnDefinition Width="2.5*" />
+                                    <ColumnDefinition Width="1.5*" />
+                                    <ColumnDefinition Width="1*" />
+                                    <ColumnDefinition Width="1.5*" />
+                                    <ColumnDefinition Width="80" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
+                                <TextBlock Grid.Column="2" Text="Launcher" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
+                                <TextBlock Grid.Column="3" Text="Size" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
+                                <TextBlock Grid.Column="4" Text="Modified" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
+                            </Grid>
+                            <!-- Separator -->
+                            <Border Grid.Row="1" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,2,0,0" />
+                            <!-- List -->
+                            <ListView x:Name="LaunchersListView"
+                                      Grid.Row="2"
+                                      MinWidth="550"
+                                      BorderThickness="0"
+                                      ItemsSource="{x:Bind _customLaunchers, Mode=OneWay}"
+                                      ItemTemplate="{StaticResource LauncherFileTemplate}"
+                                      SelectionMode="Single"
+                                      IsItemClickEnabled="True"
+                                      CanReorderItems="True"
+                                      AllowDrop="True"
+                                      CanDragItems="True"
+                                      VerticalAlignment="Top"
+                                      HorizontalAlignment="Stretch"
+                                      Tag="LaunchersListView"
+                                      DragItemsStarting="FilesListView_DragItemsStarting"
+                                      DragOver="FilesListView_DragOver"
+                                      Drop="FilesListView_Drop" />
+                            <!-- Empty/No Results messages -->
+                            <TextBlock x:Name="LaunchersEmptyText" Grid.Row="3" Text="No custom launchers configured. Click 'Add File' to add external files/launchers." Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" FontSize="13" Margin="0,40,0,40" Visibility="Collapsed" />
+                            <TextBlock x:Name="LaunchersNoResultsText" Grid.Row="4" Text="No results found." Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" FontSize="13" Margin="0,40,0,40" Visibility="Collapsed" />
+                        </Grid>
+
+                        <!-- 4. Notes Panel -->
+                        <Grid x:Name="NotesPanel" Visibility="Collapsed">
+                            <ListView x:Name="NotesListView"
+                                      ItemsSource="{x:Bind _items, Mode=OneWay}"
+                                      ItemTemplate="{StaticResource NoteTemplate}"
+                                      SelectionMode="None"
+                                      IsItemClickEnabled="False"
+                                      Background="Transparent"
+                                      BorderThickness="0">
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                            </ListView>
+                            <TextBlock x:Name="NotesEmptyText" Text="No notes yet. Click 'Add Note' to add notes." Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" FontSize="13" Margin="0,40,0,40" Visibility="Collapsed" />
+                            <TextBlock x:Name="NotesNoResultsText" Text="No results found." Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" FontSize="13" Margin="0,40,0,40" Visibility="Collapsed" />
+                        </Grid>
+
+                        <!-- 5. Tasks Panel -->
+                        <Grid x:Name="TasksPanel" Visibility="Collapsed">
+                            <ListView x:Name="TasksListView"
+                                      ItemsSource="{x:Bind _taskItems, Mode=OneWay}"
+                                      ItemTemplate="{StaticResource TodoTemplate}"
+                                      SelectionMode="None"
+                                      IsItemClickEnabled="False"
+                                      Background="Transparent"
+                                      BorderThickness="0">
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                            </ListView>
+                            <TextBlock x:Name="TasksEmptyText" Text="No tasks yet. Click 'Add Task' to create a task." Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" FontSize="13" Margin="0,40,0,40" Visibility="Collapsed" />
+                            <TextBlock x:Name="TasksNoResultsText" Text="No results found." Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" FontSize="13" Margin="0,40,0,40" Visibility="Collapsed" />
+                        </Grid>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </Expander.Content>
+    </Expander>
+</UserControl>

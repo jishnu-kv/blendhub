@@ -14,261 +14,12 @@
     </Window.SystemBackdrop>
 
     <Grid x:Name="RootGrid">
-        <Grid.Resources>
-            <!-- NavigationViewItem: custom template to style SelectionIndicator pill directly and override WinUI presenter limits -->
-            <Style TargetType="NavigationViewItem">
-                <Setter Property="Height" Value="60" />
-                <Setter Property="Width" Value="72" />
-                <Setter Property="Padding" Value="0" />
-                <Setter Property="HorizontalContentAlignment" Value="Center" />
-                <Setter Property="VerticalContentAlignment" Value="Center" />
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="NavigationViewItem">
-                            <!-- Inner layout container representing the perfect compact square -->
-                            <Grid x:Name="PresenterRoot" Background="Transparent" CornerRadius="2"
-                                Width="64"
-                                Height="52"
-                                Margin="4"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
-
-                                <!-- Visual State Manager connected natively to the item's state engine -->
-                                <VisualStateManager.VisualStateGroups>
-                                    <VisualStateGroup x:Name="CommonStates">
-                                        <VisualState x:Name="Normal">
-                                            <Storyboard>
-                                                <DoubleAnimation
-                                                    Storyboard.TargetName="IconTranslation"
-                                                    Storyboard.TargetProperty="Y"
-                                                    To="0" Duration="0:0:0.15">
-                                                    <DoubleAnimation.EasingFunction>
-                                                        <QuadraticEase EasingMode="EaseOut" />
-                                                    </DoubleAnimation.EasingFunction>
-                                                </DoubleAnimation>
-                                                <DoubleAnimation Storyboard.TargetName="ItemText"
-                                                    Storyboard.TargetProperty="Opacity"
-                                                    To="1.0" Duration="0:0:0.15" />
-                                            </Storyboard>
-                                            <VisualState.Setters>
-                                                <Setter Target="BackgroundPlate.Background"
-                                                    Value="Transparent" />
-                                                <Setter Target="SelectionIndicator.Opacity"
-                                                    Value="0.0" />
-                                                <Setter Target="IconPresenter.Foreground"
-                                                    Value="{ThemeResource TextFillColorTertiaryBrush}" />
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                        
-                                        <VisualState x:Name="PointerOver">
-                                            <Storyboard>
-                                                <DoubleAnimation
-                                                    Storyboard.TargetName="IconTranslation"
-                                                    Storyboard.TargetProperty="Y"
-                                                    To="0" Duration="0:0:0.15">
-                                                    <DoubleAnimation.EasingFunction>
-                                                        <QuadraticEase EasingMode="EaseOut" />
-                                                    </DoubleAnimation.EasingFunction>
-                                                </DoubleAnimation>
-                                                <DoubleAnimation Storyboard.TargetName="ItemText"
-                                                    Storyboard.TargetProperty="Opacity"
-                                                    To="1.0" Duration="0:0:0.15" />
-                                            </Storyboard>
-                                            <VisualState.Setters>
-                                                <Setter Target="BackgroundPlate.Background"
-                                                    Value="{ThemeResource ControlSolidFillColorDefaultBrush}" />
-                                                <Setter Target="SelectionIndicator.Opacity"
-                                                    Value="0.0" />
-                                                <Setter Target="IconPresenter.Foreground"
-                                                    Value="{ThemeResource ControlStrongFillColorDefaultBrush}" />
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                        
-                                        <VisualState x:Name="Pressed">
-                                            <Storyboard>
-                                                <DoubleAnimation
-                                                    Storyboard.TargetName="IconTranslation"
-                                                    Storyboard.TargetProperty="Y"
-                                                    To="0" Duration="0:0:0.15">
-                                                    <DoubleAnimation.EasingFunction>
-                                                        <QuadraticEase EasingMode="EaseOut" />
-                                                    </DoubleAnimation.EasingFunction>
-                                                </DoubleAnimation>
-                                                <DoubleAnimation Storyboard.TargetName="ItemText"
-                                                    Storyboard.TargetProperty="Opacity"
-                                                    To="1.0" Duration="0:0:0.15" />
-                                            </Storyboard>
-                                            <VisualState.Setters>
-                                                <Setter Target="BackgroundPlate.Background"
-                                                    Value="{ThemeResource ControlFillColorTertiaryBrush}" />
-                                                <Setter Target="SelectionIndicator.Opacity"
-                                                    Value="0.0" />
-                                                <Setter Target="IconPresenter.Foreground"
-                                                    Value="{ThemeResource ControlStrongFillColorDefaultBrush}" />
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                        
-                                        <VisualState x:Name="Disabled" />
-                                        
-                                        <VisualState x:Name="Selected">
-                                            <Storyboard>
-                                                <DoubleAnimation
-                                                    Storyboard.TargetName="IconTranslation"
-                                                    Storyboard.TargetProperty="Y"
-                                                    To="8" Duration="0:0:0.15">
-                                                    <DoubleAnimation.EasingFunction>
-                                                        <QuadraticEase EasingMode="EaseOut" />
-                                                    </DoubleAnimation.EasingFunction>
-                                                </DoubleAnimation>
-                                                <DoubleAnimation Storyboard.TargetName="ItemText"
-                                                    Storyboard.TargetProperty="Opacity"
-                                                    To="0.0" Duration="0:0:0.15" />
-                                            </Storyboard>
-                                            <VisualState.Setters>
-                                                <Setter Target="BackgroundPlate.Background"
-                                                    Value="{ThemeResource ControlSolidFillColorDefaultBrush}" />
-                                                <Setter Target="SelectionIndicator.Opacity"
-                                                    Value="1.0" />
-                                                <Setter Target="IconPresenter.Foreground"
-                                                    Value="{ThemeResource NavigationViewSelectionIndicatorForeground}" />
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                        
-                                        <VisualState x:Name="SelectedUnfocused">
-                                            <Storyboard>
-                                                <DoubleAnimation
-                                                    Storyboard.TargetName="IconTranslation"
-                                                    Storyboard.TargetProperty="Y"
-                                                    To="8" Duration="0:0:0.15">
-                                                    <DoubleAnimation.EasingFunction>
-                                                        <QuadraticEase EasingMode="EaseOut" />
-                                                    </DoubleAnimation.EasingFunction>
-                                                </DoubleAnimation>
-                                                <DoubleAnimation Storyboard.TargetName="ItemText"
-                                                    Storyboard.TargetProperty="Opacity"
-                                                    To="0.0" Duration="0:0:0.15" />
-                                            </Storyboard>
-                                            <VisualState.Setters>
-                                                <Setter Target="BackgroundPlate.Background"
-                                                    Value="{ThemeResource ControlSolidFillColorDefaultBrush}" />
-                                                <Setter Target="SelectionIndicator.Opacity"
-                                                    Value="1.0" />
-                                                <Setter Target="IconPresenter.Foreground"
-                                                    Value="{ThemeResource NavigationViewSelectionIndicatorForeground}" />
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                        
-                                        <VisualState x:Name="PointerOverSelected">
-                                            <Storyboard>
-                                                <DoubleAnimation
-                                                    Storyboard.TargetName="IconTranslation"
-                                                    Storyboard.TargetProperty="Y"
-                                                    To="8" Duration="0:0:0.15">
-                                                    <DoubleAnimation.EasingFunction>
-                                                        <QuadraticEase EasingMode="EaseOut" />
-                                                    </DoubleAnimation.EasingFunction>
-                                                </DoubleAnimation>
-                                                <DoubleAnimation Storyboard.TargetName="ItemText"
-                                                    Storyboard.TargetProperty="Opacity"
-                                                    To="0.0" Duration="0:0:0.15" />
-                                            </Storyboard>
-                                            <VisualState.Setters>
-                                                <Setter Target="BackgroundPlate.Background"
-                                                    Value="{ThemeResource ControlSolidFillColorDefaultBrush}" />
-                                                <Setter Target="SelectionIndicator.Opacity"
-                                                    Value="1.0" />
-                                                <Setter Target="IconPresenter.Foreground"
-                                                    Value="{ThemeResource NavigationViewSelectionIndicatorForeground}" />
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                        
-                                        <VisualState x:Name="PressedSelected">
-                                            <Storyboard>
-                                                <DoubleAnimation
-                                                    Storyboard.TargetName="IconTranslation"
-                                                    Storyboard.TargetProperty="Y"
-                                                    To="8" Duration="0:0:0.15">
-                                                    <DoubleAnimation.EasingFunction>
-                                                        <QuadraticEase EasingMode="EaseOut" />
-                                                    </DoubleAnimation.EasingFunction>
-                                                </DoubleAnimation>
-                                                <DoubleAnimation Storyboard.TargetName="ItemText"
-                                                    Storyboard.TargetProperty="Opacity"
-                                                    To="0.0" Duration="0:0:0.15" />
-                                            </Storyboard>
-                                            <VisualState.Setters>
-                                                <Setter Target="BackgroundPlate.Background"
-                                                    Value="{ThemeResource ControlSolidFillColorDefaultBrush}" />
-                                                <Setter Target="SelectionIndicator.Opacity"
-                                                    Value="1.0" />
-                                                <Setter Target="IconPresenter.Foreground"
-                                                    Value="{ThemeResource NavigationViewSelectionIndicatorForeground}" />
-                                            </VisualState.Setters>
-                                        </VisualState>
-                                    </VisualStateGroup>
-                                </VisualStateManager.VisualStateGroups>
-
-                                <!-- Native tactile rounded card highlight -->
-                                <Border x:Name="BackgroundPlate" CornerRadius="4"
-                                    Background="Transparent" />
-
-                                <!-- Wrap SelectionIndicator in a grid so that its offset is 0,0 - this enables the offset animation. -->
-                                <Grid Margin="2,0,0,0" HorizontalAlignment="Left"
-                                    VerticalAlignment="Center">
-                                    <Rectangle x:Name="SelectionIndicator"
-                                        Width="3"
-                                        Height="20"
-                                        Fill="{ThemeResource NavigationViewSelectionIndicatorForeground}"
-                                        Opacity="0.0"
-                                        RadiusX="2"
-                                        RadiusY="2" />
-                                </Grid>
-
-                                <!-- Custom content layout with direct visual state targets -->
-                                <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-
-                                    <ContentPresenter x:Name="IconPresenter"
-                                        Grid.Row="0"
-                                        Content="{TemplateBinding Icon}"
-                                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center">
-                                        <ContentPresenter.RenderTransform>
-                                            <TranslateTransform x:Name="IconTranslation" Y="0" />
-                                        </ContentPresenter.RenderTransform>
-                                    </ContentPresenter>
-
-                                    <TextBlock x:Name="ItemText"
-                                        Grid.Row="1"
-                                        Text="{TemplateBinding Content}"
-                                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                        FontSize="10"
-                                        Margin="0,4,0,0"
-                                        HorizontalAlignment="Center"
-                                        TextAlignment="Center"
-                                        TextTrimming="CharacterEllipsis"
-                                        TextWrapping="NoWrap"
-                                        MaxWidth="56"
-                                        ToolTipService.ToolTip="{TemplateBinding Content}"
-                                        Opacity="1.0" />
-                                </Grid>
-                            </Grid>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-        </Grid.Resources>
-
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- WinUI 3 Gallery-style TitleBar -->
+        <!-- TitleBar -->
         <TitleBar
             x:Name="AppTitleBar"
             Title="BlendHub"
@@ -278,12 +29,82 @@
             <TitleBar.IconSource>
                 <ImageIconSource ImageSource="ms-appx:///Assets/logo.png" />
             </TitleBar.IconSource>
-            <TitleBar.Content>
-                <Grid />
-            </TitleBar.Content>
+            <TitleBar.RightHeader>
+                <Grid HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Button
+                        x:Name="NotificationButton"
+                        Grid.Column="1"
+                        Click="TestButton2Click"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Width="40"
+                        Height="32"
+                        Margin="0,0,0,0"
+                        Content="&#xEA8F;"
+                        FontFamily="Segoe MDL2 Assets"
+                        FontSize="16" />
+                </Grid>
+            </TitleBar.RightHeader>
         </TitleBar>
 
-        <!-- NavigationView matching WinUI 3 Gallery layout -->
+        <!-- TeachingTip -->
+        <TeachingTip
+            x:Name="TestButton2TeachingTip"
+            Target="{x:Bind NotificationButton}"
+            IsLightDismissEnabled="True"
+            PlacementMargin="0"
+            PreferredPlacement="Bottom"
+            TailVisibility="Collapsed">
+            <TeachingTip.Content>
+                <Grid Width="300">
+                    <!-- Empty State -->
+                    <StackPanel x:Name="NotificationEmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8" Margin="16">
+                        <FontIcon Glyph="&#xEA8F;" FontSize="32" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="No Notifications" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" />
+                        <TextBlock Text="Active downloads will appear here." Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" />
+                    </StackPanel>
+                    
+                    <!-- Active Download / Progress Panel -->
+                    <StackPanel x:Name="NotificationActivePanel" Visibility="Collapsed" Spacing="8" Margin="8">
+                        <TextBlock x:Name="NotificationFilenameText" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                        <ProgressBar x:Name="NotificationProgressBar" Value="0" Maximum="100"/>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <TextBlock x:Name="NotificationProgressText" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="NotificationPauseResumeBtn" Click="NotificationPauseResumeBtn_Click" Style="{StaticResource DefaultButtonStyle}" Padding="8,4" ToolTipService.ToolTip="Pause">
+                                    <FontIcon x:Name="NotificationPauseResumeIcon" Glyph="&#xE769;" FontSize="12" />
+                                </Button>
+                                <Button x:Name="NotificationDeleteDownloadBtn" Click="NotificationDeleteDownloadBtn_Click" Style="{StaticResource DefaultButtonStyle}" Padding="8,4" ToolTipService.ToolTip="Cancel">
+                                    <FontIcon Glyph="&#xE74D;" FontSize="12" />
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                        
+                        <!-- Open Actions -->
+                        <Grid x:Name="NotificationCompletionPanel" Visibility="Collapsed" ColumnDefinitions="*,*" ColumnSpacing="8" Margin="0,4,0,0">
+                            <Button x:Name="NotificationOpenInstallerBtn" Click="NotificationOpenInstallerBtn_Click" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Stretch" Padding="4">
+                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE8E5;" FontSize="10"/>
+                                    <TextBlock Text="Open" Style="{StaticResource CaptionTextBlockStyle}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="NotificationOpenFolderBtn" Grid.Column="1" Click="NotificationOpenFolderBtn_Click" Style="{StaticResource DefaultButtonStyle}" HorizontalAlignment="Stretch" Padding="4">
+                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE8DA;" FontSize="10"/>
+                                    <TextBlock Text="Folder" Style="{StaticResource CaptionTextBlockStyle}"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </TeachingTip.Content>
+        </TeachingTip>
+
+        <!-- NavigationView -->
         <NavigationView
             x:Name="NavView"
             Grid.Row="1"
@@ -317,6 +138,7 @@
                 </NavigationViewItem>
                 
                 <NavigationViewItem x:Name="CanvasItem" Content="Canvas" Tag="canvas"
+                                    Visibility="Collapsed"
                                     AutomationProperties.AutomationId="CanvasItem">
                     <NavigationViewItem.Icon>
                         <PathIcon Width="24" Height="24" />
@@ -327,6 +149,13 @@
                 
                 <NavigationViewItemHeader Content="Blender" />
                 
+                <NavigationViewItem x:Name="AddonsItem" Content="Addons" Tag="addons"
+                                    AutomationProperties.AutomationId="AddonsItem">
+                    <NavigationViewItem.Icon>
+                        <PathIcon Width="24" Height="24" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
                 <NavigationViewItem x:Name="DownloadItem" Content="Download" Tag="download"
                                     AutomationProperties.AutomationId="DownloadItem">
                     <NavigationViewItem.Icon>
@@ -334,12 +163,6 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
 
-                <NavigationViewItem x:Name="AddonsItem" Content="Addons" Tag="addons"
-                                    AutomationProperties.AutomationId="AddonsItem">
-                    <NavigationViewItem.Icon>
-                        <PathIcon Width="24" Height="24" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
 
                 <NavigationViewItem x:Name="BackupItem" Content="Backup" Tag="backup"
                                     AutomationProperties.AutomationId="BackupItem">

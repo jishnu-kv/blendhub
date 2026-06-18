@@ -37,6 +37,78 @@
         "url": "https://download.blender.org/release/Blender5.1/blender-5.1.0-windows-x64.zip",
         "release_date": "17-Mar-2026 10:31",
         "size_bytes": 414263332
+      },
+      {
+        "filename": "blender-5.1.1-windows-arm64.msi",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.1-windows-arm64.msi",
+        "release_date": "14-Apr-2026 07:28",
+        "size_bytes": 231706624
+      },
+      {
+        "filename": "blender-5.1.1-windows-arm64.msix",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.1-windows-arm64.msix",
+        "release_date": "14-Apr-2026 07:28",
+        "size_bytes": 281731300
+      },
+      {
+        "filename": "blender-5.1.1-windows-arm64.zip",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.1-windows-arm64.zip",
+        "release_date": "14-Apr-2026 07:28",
+        "size_bytes": 267140499
+      },
+      {
+        "filename": "blender-5.1.1-windows-x64.msi",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.1-windows-x64.msi",
+        "release_date": "14-Apr-2026 07:28",
+        "size_bytes": 371482624
+      },
+      {
+        "filename": "blender-5.1.1-windows-x64.msix",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.1-windows-x64.msix",
+        "release_date": "14-Apr-2026 07:28",
+        "size_bytes": 432060650
+      },
+      {
+        "filename": "blender-5.1.1-windows-x64.zip",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.1-windows-x64.zip",
+        "release_date": "14-Apr-2026 07:28",
+        "size_bytes": 414370237
+      },
+      {
+        "filename": "blender-5.1.2-windows-arm64.msi",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.2-windows-arm64.msi",
+        "release_date": "19-May-2026 07:10",
+        "size_bytes": 231706624
+      },
+      {
+        "filename": "blender-5.1.2-windows-arm64.msix",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.2-windows-arm64.msix",
+        "release_date": "19-May-2026 07:10",
+        "size_bytes": 281743217
+      },
+      {
+        "filename": "blender-5.1.2-windows-arm64.zip",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.2-windows-arm64.zip",
+        "release_date": "19-May-2026 07:10",
+        "size_bytes": 267204476
+      },
+      {
+        "filename": "blender-5.1.2-windows-x64.msi",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.2-windows-x64.msi",
+        "release_date": "19-May-2026 07:10",
+        "size_bytes": 371490816
+      },
+      {
+        "filename": "blender-5.1.2-windows-x64.msix",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.2-windows-x64.msix",
+        "release_date": "19-May-2026 07:10",
+        "size_bytes": 432068925
+      },
+      {
+        "filename": "blender-5.1.2-windows-x64.zip",
+        "url": "https://download.blender.org/release/Blender5.1/blender-5.1.2-windows-x64.zip",
+        "release_date": "19-May-2026 07:10",
+        "size_bytes": 414378949
       }
     ]
   },
@@ -191,6 +263,42 @@
         "url": "https://download.blender.org/release/Blender4.5/blender-4.5.1-windows-x64.zip",
         "release_date": "29-Jul-2025 08:31",
         "size_bytes": 399708581
+      },
+      {
+        "filename": "blender-4.5.10-windows-arm64.msi",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.10-windows-arm64.msi",
+        "release_date": "19-May-2026 07:23",
+        "size_bytes": 221765632
+      },
+      {
+        "filename": "blender-4.5.10-windows-arm64.msix",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.10-windows-arm64.msix",
+        "release_date": "19-May-2026 07:24",
+        "size_bytes": 269309136
+      },
+      {
+        "filename": "blender-4.5.10-windows-arm64.zip",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.10-windows-arm64.zip",
+        "release_date": "19-May-2026 07:24",
+        "size_bytes": 255192277
+      },
+      {
+        "filename": "blender-4.5.10-windows-x64.msi",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.10-windows-x64.msi",
+        "release_date": "19-May-2026 07:23",
+        "size_bytes": 360173568
+      },
+      {
+        "filename": "blender-4.5.10-windows-x64.msix",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.10-windows-x64.msix",
+        "release_date": "19-May-2026 07:23",
+        "size_bytes": 415744476
+      },
+      {
+        "filename": "blender-4.5.10-windows-x64.zip",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.10-windows-x64.zip",
+        "release_date": "19-May-2026 07:23",
+        "size_bytes": 398911842
       },
       {
         "filename": "blender-4.5.2-windows-arm64.msi",
@@ -443,6 +551,42 @@
         "url": "https://download.blender.org/release/Blender4.5/blender-4.5.8-windows-x64.zip",
         "release_date": "17-Mar-2026 08:58",
         "size_bytes": 398905532
+      },
+      {
+        "filename": "blender-4.5.9-windows-arm64.msi",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.9-windows-arm64.msi",
+        "release_date": "21-Apr-2026 07:39",
+        "size_bytes": 221736960
+      },
+      {
+        "filename": "blender-4.5.9-windows-arm64.msix",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.9-windows-arm64.msix",
+        "release_date": "21-Apr-2026 07:40",
+        "size_bytes": 269318919
+      },
+      {
+        "filename": "blender-4.5.9-windows-arm64.zip",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.9-windows-arm64.zip",
+        "release_date": "21-Apr-2026 07:39",
+        "size_bytes": 255185009
+      },
+      {
+        "filename": "blender-4.5.9-windows-x64.msi",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.9-windows-x64.msi",
+        "release_date": "21-Apr-2026 07:39",
+        "size_bytes": 360325120
+      },
+      {
+        "filename": "blender-4.5.9-windows-x64.msix",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.9-windows-x64.msix",
+        "release_date": "21-Apr-2026 07:39",
+        "size_bytes": 415891530
+      },
+      {
+        "filename": "blender-4.5.9-windows-x64.zip",
+        "url": "https://download.blender.org/release/Blender4.5/blender-4.5.9-windows-x64.zip",
+        "release_date": "21-Apr-2026 07:39",
+        "size_bytes": 399051129
       }
     ]
   },
@@ -938,6 +1082,42 @@
         "url": "https://download.blender.org/release/Blender4.2/blender-4.2.2-windows-x64.zip",
         "release_date": "24-Sep-2024 08:04",
         "size_bytes": 383613178
+      },
+      {
+        "filename": "blender-4.2.20-windows-x64.msi",
+        "url": "https://download.blender.org/release/Blender4.2/blender-4.2.20-windows-x64.msi",
+        "release_date": "21-Apr-2026 07:40",
+        "size_bytes": 341053440
+      },
+      {
+        "filename": "blender-4.2.20-windows-x64.msix",
+        "url": "https://download.blender.org/release/Blender4.2/blender-4.2.20-windows-x64.msix",
+        "release_date": "21-Apr-2026 07:41",
+        "size_bytes": 400950207
+      },
+      {
+        "filename": "blender-4.2.20-windows-x64.zip",
+        "url": "https://download.blender.org/release/Blender4.2/blender-4.2.20-windows-x64.zip",
+        "release_date": "21-Apr-2026 07:41",
+        "size_bytes": 383201903
+      },
+      {
+        "filename": "blender-4.2.21-windows-x64.msi",
+        "url": "https://download.blender.org/release/Blender4.2/blender-4.2.21-windows-x64.msi",
+        "release_date": "19-May-2026 07:23",
+        "size_bytes": 341032960
+      },
+      {
+        "filename": "blender-4.2.21-windows-x64.msix",
+        "url": "https://download.blender.org/release/Blender4.2/blender-4.2.21-windows-x64.msix",
+        "release_date": "19-May-2026 07:22",
+        "size_bytes": 400945735
+      },
+      {
+        "filename": "blender-4.2.21-windows-x64.zip",
+        "url": "https://download.blender.org/release/Blender4.2/blender-4.2.21-windows-x64.zip",
+        "release_date": "19-May-2026 07:21",
+        "size_bytes": 383195947
       },
       {
         "filename": "blender-4.2.3-windows-x64.msi",

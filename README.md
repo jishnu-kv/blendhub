@@ -1,36 +1,133 @@
-# BlendHub
+# BlendHub - Premium Blender Launcher & Project Hub
 
-BlendHub is a beautiful, premium, and state-of-the-art desktop launcher and project management utility designed specifically for Blender creators, artists, and studios. Organize your `.blend` files, manage project notes and tasks via an integrated Kanban system, and map custom third-party asset/editing software directly to your files.
+**A professional, high-performance desktop launcher, manager, and Kanban workspace for Blender creators built with WinUI 3 and .NET 8.0**
 
----
-
-## Key Features
-
-- 📂 **Project Cards**: A unified view of your Blender projects, showing thumbnails, file lists, and creation statuses.
-- 🚀 **Default & Project-Specific File Launchers**: Define custom file launchers (e.g., opening `.psd` files with Photoshop, `.fbx` with an external viewer) globally in settings or override them on a per-project basis.
-- 📋 **Integrated Kanban & Notes System**: Keep track of what needs to be done directly inside your project workspace. Add notes and manage planned, in-progress, or completed tasks with elegant priority tags.
-- 🏗️ **Multi-Version Blender Support**: Easily manage multiple Blender installations and associate files with specific versions.
-- 🌓 **Dynamic Modern Aesthetics**: Built on WinUI 3 with rich Fluent design styles, responsive transitions, dark/light theme support, and a stable tabbed interface.
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![WinUI 3](https://img.shields.io/badge/WinUI-3-0078D4?logo=windows)](https://docs.microsoft.com/windows/apps/winui/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Polish--Phase-yellow)](README.md)
 
 ---
 
-## Build & Release Guide
+## 🎯 Project Status & Roadmap
 
-BlendHub targets **.NET 8** and **WinUI 3 (Windows App SDK)**. The repository includes pre-configured **Publish Profiles** for target platforms to compile robust, clean, and self-contained builds.
+BlendHub is actively moving towards its first major public release. Below is our roadmap progress:
 
-### Requirements
-- .NET 8.0 SDK or later
-- Windows 10/11
+- **State 1: Foundation** ✅ *Completed*
+  - Project initialization, architecture design, MVVM framework setup, and repository structure.
+- **State 2: Core UI & Pages** ✅ *Completed*
+  - Implementation of primary views including Home, Projects list, Addon center, Backup/Restore, and Settings.
+- **State 3: Current Phase** 🚀 *In Progress*
+  - Code polishing, UI refinement, and optimization for the stable v1.0.0 release.
+- **State 4: Future Expansion** 📅 *Planned*
+  - **Reference Board**: Visual moodboards directly within your launcher workspace.
+  - **Collaboration & Accounts**: Team synchronization, profiles, and shared workspaces.
+  - **Render Manager**: Detailed job queue management and render farm integrations.
+  - **Assets Manager**: Local and cloud library organization for 3D assets.
 
-### Creating a Proper Production Release
-To compile a completely fresh, fully optimized, and self-contained build for a specific platform, clean the build directories and run the publish command against the corresponding publish profile:
+---
+
+## ✨ Feature Highlights
+
+### 📂 Unified Project Dashboard
+- **Visual Cards**: View Blender projects with thumbnails, file lists, and metadata.
+- **Integrated Kanban Board**: Stay organized with tasks grouped by status (Todo, In Progress, Done) and priority tags.
+- **File Launcher Customization**: Configure default and project-level application overrides (e.g., open `.psd` with Photoshop, `.fbx` with a specific engine viewer).
+
+### 🏗️ Blender Version Manager
+- **Multi-Version Tracking**: Register, organize, and launch files using different Blender versions.
+- **Scraper & Downloader**: Easily list available online versions and download them directly inside the app.
+
+### 🔌 Addon & Extension Center
+- **Addon Control**: Browse, install, update, and manage your Blender addons and extensions from a single interface.
+
+### 💾 Backup, Restore & Sync
+- **Data Safeguard**: Backup your preferences, project structures, and custom launchers.
+- **Sync System**: Sync your settings seamlessly to keep your workspaces consistent.
+
+### 🎨 Premium Fluent Design
+- **Modern Aesthetics**: Leverages Windows App SDK and WinUI 3 controls.
+- **Theme Support**: Seamless transitions between beautiful Dark and Light modes.
+- **Responsive Layout**: Fluid UI designed for maximum screen space utilization.
+
+---
+
+## 📂 Project Structure
+
+```
+BlendHub/
+├── BlendHub.slnx                # Visual Studio solution file
+├── index.html                   # Project documentation landing page
+├── scrape_blender_versions.py   # Script to scrape online Blender versions
+└── BlendHub/                    # Main application project source
+    ├── App.xaml / .cs           # Application entry point & configuration
+    ├── MainWindow.xaml / .cs    # Main application shell window
+    ├── app.manifest             # App execution properties & permissions
+    ├── Package.appxmanifest     # MSIX packaging manifest
+    ├── BlendHub.csproj          # MSBuild configuration and dependencies
+    ├── blender_versions.json    # Local cache of scraped Blender releases
+    ├── extensions.json          # Cached data for Blender addons/extensions
+    ├── Core/                    # Core helpers, extensions, & constants
+    ├── Models/                  # Data models (Project, Version, Tasks, Addons)
+    ├── Services/                # System, Project, Addon, & Download services
+    ├── ViewModels/              # ViewModels implementing MVVM pattern
+    ├── Views/                   # Reusable Views, custom controls & pages
+    │   ├── Controls/            # Custom UI elements
+    │   ├── Dialogs/             # Modal content dialogs (Create/Edit Project)
+    │   └── Pages/               # Core application pages
+    │       ├── Home/            # Home / Dashboard page
+    │       ├── Projects/        # Project Cards & Kanban board page
+    │       ├── Settings/        # Custom launchers & app configurations
+    │       ├── AddonsPage/      # Addons management pages
+    │       ├── ReferenceBoard/  # Visual reference board workspace page
+    │       ├── BackupPage.xaml  # Settings backup utility
+    │       ├── RestorePage.xaml # Settings restore utility
+    │       ├── DownloadPage.xaml# Blender version installer/downloader
+    │       └── SyncPage.xaml    # Cloud sync page
+    └── Assets/                  # Visual assets (branding logos, local files)
+        ├── AppIcons/            # Windows Store & packaging tile/logo scale resources
+        ├── Fonts/               # Customized Segoe UI & application typography
+        ├── Styles/              # Styling resources (Icons.xaml, Navigation.xaml)
+        └── Promotional Sizes/   # Graphic design branding sizes
+```
+
+---
+
+## 🛠️ Technology Stack
+
+- **Framework**: WinUI 3 (Windows App SDK 1.8)
+- **Language**: C# / .NET 8.0
+- **Architecture**: MVVM (using `CommunityToolkit.Mvvm`)
+- **Libraries**:
+  - `CommunityToolkit.WinUI.Controls.SettingsControls`
+  - `CommunityToolkit.WinUI.Controls.Segmented`
+  - `CommunityToolkit.WinUI.Converters`
+  - `CommunityToolkit.WinUI.Collections`
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Windows 10 (version 1809 or higher) or Windows 11
+- .NET 8.0 SDK
+
+### Development Build
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Gzeu/BlendHub.git
+   cd BlendHub
+   ```
+2. Restore and run:
+   ```powershell
+   dotnet restore
+   dotnet run --project BlendHub/BlendHub.csproj
+   ```
+
+### Creating a Production Release
+To compile a fully optimized, self-contained build for a specific target architecture, use the corresponding publish command:
 
 ```powershell
-# 1. Clean the build artifacts
-dotnet clean
-
-# 2. Build for your target architecture:
-
 # 64-bit Windows PC (Standard)
 dotnet publish -c Release -p:PublishProfile=win-x64
 
@@ -41,5 +138,12 @@ dotnet publish -c Release -p:PublishProfile=win-arm64
 dotnet publish -c Release -p:PublishProfile=win-x86
 ```
 
-The self-contained release directories containing the executable (`BlendHub.exe`) and all runtime assets will be generated in:
-`BlendHub\bin\Release\net8.0-windows10.0.19041.0\<win-arch>\publish\`
+---
+
+## 📜 License
+
+Licensed under the **MIT License**. See [LICENSE](LICENSE) for more details.
+
+---
+
+*Designed for Blender creators, built for speed.* 🚀
