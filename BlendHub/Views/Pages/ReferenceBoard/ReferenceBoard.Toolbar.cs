@@ -61,6 +61,7 @@ namespace BlendHub.ReferenceBoard
                 _shapeStrokeColor = item.IsNone ? Microsoft.UI.Colors.Transparent : (item.Brush as SolidColorBrush)?.Color ?? Microsoft.UI.Colors.Black;
                 UpdateSelectedShapeProperties();
                 UpdateShapePreviewUI();
+                UpdateInkDrawingAttributes();
             }
         }
 
@@ -124,6 +125,7 @@ namespace BlendHub.ReferenceBoard
         {
             if (_isUpdatingUI) return;
             UpdateSelectedShapeProperties();
+            UpdateInkDrawingAttributes();
         }
 
         private void UpdateSelectedShapeProperties()

@@ -15,6 +15,10 @@ namespace BlendHub.Services
         public bool IsUpdateAvailable { get; set; }
         public bool ShowDivider { get; set; } = true;
 
+        public bool HasExecutable => !string.IsNullOrWhiteSpace(ExecutablePath) && System.IO.File.Exists(ExecutablePath);
+        public bool IsPathMissing => !HasExecutable;
+        public string IdentificationKey => !string.IsNullOrWhiteSpace(ExecutablePath) ? ExecutablePath : (string.IsNullOrWhiteSpace(ConfigPath) ? Version : ConfigPath);
+
         private string? _fullVersion;
         public string FullVersion
         {
@@ -329,7 +333,13 @@ namespace BlendHub.Services
             // Filter out hidden versions if not included
             if (!includeHidden && AppSettingsService.Instance.Settings.HiddenBlenderPaths != null)
             {
-                versions = versions.Where(v => !AppSettingsService.Instance.Settings.HiddenBlenderPaths.Contains(v.ExecutablePath)).ToList();
+                var hiddenSet = new HashSet<string>(AppSettingsService.Instance.Settings.HiddenBlenderPaths, StringComparer.OrdinalIgnoreCase);
+                versions = versions.Where(v =>
+                    (string.IsNullOrEmpty(v.ExecutablePath) || !hiddenSet.Contains(v.ExecutablePath)) &&
+                    (string.IsNullOrEmpty(v.ConfigPath) || !hiddenSet.Contains(v.ConfigPath)) &&
+                    !hiddenSet.Contains(v.IdentificationKey) &&
+                    !hiddenSet.Contains(v.Version) &&
+                    !hiddenSet.Contains(v.DisplayName)).ToList();
             }
 
             var sortedVersions = versions.OrderByDescending(v => v.Version).ToList();

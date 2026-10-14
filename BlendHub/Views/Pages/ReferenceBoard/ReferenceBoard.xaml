@@ -200,6 +200,9 @@
                         <CompositeTransform x:Name="CanvasTransform" ScaleX="1" ScaleY="1" TranslateX="0" TranslateY="0" />
                     </Canvas.RenderTransform>
                 </Canvas>
+                <!-- Official WinUI 3 InkCanvas for smooth inking -->
+                <InkCanvas x:Name="ActiveInkCanvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                           Visibility="Collapsed" IsHitTestVisible="False" />
             </Grid>
         </Grid>
 

@@ -291,6 +291,18 @@ namespace BlendHub.ReferenceBoard
                     fe.IsHitTestVisible = !isDrawing;
                 }
             }
+
+            // 3. Official WinUI 3 InkCanvas activation for Pen mode
+            if (ActiveInkCanvas != null)
+            {
+                bool isPen = _currentTool == ToolType.Pen;
+                ActiveInkCanvas.Visibility = isPen ? Visibility.Visible : Visibility.Collapsed;
+                ActiveInkCanvas.IsHitTestVisible = isPen;
+                if (isPen)
+                {
+                    UpdateInkDrawingAttributes();
+                }
+            }
         }
 
         private void WireUpEvents(UIElement element)

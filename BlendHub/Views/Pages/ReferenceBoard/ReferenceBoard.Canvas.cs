@@ -27,6 +27,158 @@ namespace BlendHub.ReferenceBoard
             CanvasContainer.AddHandler(PointerPressedEvent, new PointerEventHandler(Canvas_PointerPressed), true);
             CanvasContainer.AddHandler(PointerWheelChangedEvent, new PointerEventHandler(CanvasContainer_PointerWheelChanged), true);
             CanvasContainer.AddHandler(PointerMovedEvent, new PointerEventHandler(CanvasContainer_PointerMoved), true);
+
+            InitializeInkCanvas();
+        }
+
+        private void InitializeInkCanvas()
+        {
+            if (ActiveInkCanvas == null) return;
+
+            ActiveInkCanvas.InkPresenter.InputDeviceTypes =
+                Windows.UI.Core.CoreInputDeviceTypes.Pen |
+                Windows.UI.Core.CoreInputDeviceTypes.Mouse |
+                Windows.UI.Core.CoreInputDeviceTypes.Touch;
+
+            ActiveInkCanvas.InkPresenter.StrokesCollected += ActiveInkCanvas_StrokesCollected;
+            UpdateInkDrawingAttributes();
+        }
+
+        private void ActiveInkCanvas_StrokesCollected(Microsoft.UI.Xaml.Controls.InkPresenter sender, Microsoft.UI.Xaml.Controls.InkStrokesCollectedEventArgs args)
+        {
+            if (args.Strokes == null || args.Strokes.Count == 0) return;
+
+            float zoom = (float)CanvasTransform.ScaleX;
+            if (zoom <= 0.001f) zoom = 1.0f;
+            double panX = CanvasTransform.TranslateX;
+            double panY = CanvasTransform.TranslateY;
+
+            foreach (var stroke in args.Strokes)
+            {
+                var inkPoints = stroke.GetInkPoints();
+                if (inkPoints == null || inkPoints.Count == 0) continue;
+
+                // Transform points from ActiveInkCanvas viewport space into InfiniteCanvasArea space
+                var canvasPoints = new List<Point>(inkPoints.Count);
+                for (int i = 0; i < inkPoints.Count; i++)
+                {
+                    var p = inkPoints[i].Position;
+                    double unscaledX = (p.X - panX) / zoom;
+                    double unscaledY = (p.Y - panY) / zoom;
+                    canvasPoints.Add(new Point(unscaledX, unscaledY));
+                }
+
+                if (canvasPoints.Count < 2) continue;
+
+                var strokeAttr = stroke.DrawingAttributes;
+                var strokeColor = strokeAttr.Color;
+                double strokeThickness = strokeAttr.Size.Width;
+
+                var path = ConvertCanvasPointsToPath(canvasPoints, strokeColor, strokeThickness);
+                if (path == null) continue;
+
+                double left = Canvas.GetLeft(path);
+                double top = Canvas.GetTop(path);
+                double w = path.Width;
+                double h = path.Height;
+
+                var pic = new PenItemControl
+                {
+                    Shape = path,
+                    Points = canvasPoints,
+                    Width = w,
+                    Height = h
+                };
+                Canvas.SetLeft(pic, left);
+                Canvas.SetTop(pic, top);
+                WireUpEvents(pic);
+                _historyManager.ExecuteCommand(new AddItemCommand(InfiniteCanvasArea, pic));
+                MarkAsUnsaved();
+            }
+
+            // Clear temporary stroke preview from ink canvas container
+            ActiveInkCanvas.InkPresenter.StrokeContainer.Clear();
+        }
+
+        private Microsoft.UI.Xaml.Shapes.Path? ConvertCanvasPointsToPath(List<Point> points, Color strokeColor, double strokeThickness)
+        {
+            if (points == null || points.Count < 2) return null;
+
+            double minX = double.MaxValue;
+            double minY = double.MaxValue;
+            double maxX = double.MinValue;
+            double maxY = double.MinValue;
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                var p = points[i];
+                if (p.X < minX) minX = p.X;
+                if (p.Y < minY) minY = p.Y;
+                if (p.X > maxX) maxX = p.X;
+                if (p.Y > maxY) maxY = p.Y;
+            }
+
+            double padding = strokeThickness / 2 + 5;
+            double px = minX - padding;
+            double py = minY - padding;
+            double w = Math.Max(1, maxX - minX + padding * 2);
+            double h = Math.Max(1, maxY - minY + padding * 2);
+
+            var geometry = new PathGeometry();
+            var figure = new PathFigure
+            {
+                StartPoint = new Point(points[0].X - px, points[0].Y - py),
+                IsClosed = false
+            };
+
+            for (int i = 1; i < points.Count; i++)
+            {
+                figure.Segments.Add(new LineSegment
+                {
+                    Point = new Point(points[i].X - px, points[i].Y - py)
+                });
+            }
+
+            geometry.Figures.Add(figure);
+
+            var path = new Microsoft.UI.Xaml.Shapes.Path
+            {
+                Data = geometry,
+                Stroke = new SolidColorBrush(strokeColor),
+                StrokeThickness = strokeThickness,
+                StrokeLineJoin = PenLineJoin.Round,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                Width = w,
+                Height = h,
+                Stretch = Stretch.None
+            };
+
+            Canvas.SetLeft(path, px);
+            Canvas.SetTop(path, py);
+
+            return path;
+        }
+
+        private void UpdateInkDrawingAttributes()
+        {
+            if (ActiveInkCanvas == null) return;
+
+            var strokeColor = _shapeStrokeColor;
+            if (ShapeOutlineOpacitySlider != null)
+            {
+                strokeColor.A = (byte)(ShapeOutlineOpacitySlider.Alpha * 255 / 100.0);
+            }
+
+            double thickness = ShapeThicknessSlider != null ? ShapeThicknessSlider.Value : 3.0;
+            if (thickness < 1) thickness = 1;
+
+            var attr = ActiveInkCanvas.InkPresenter.CopyDefaultDrawingAttributes();
+            attr.Color = strokeColor;
+            attr.Size = new Size(thickness, thickness);
+            attr.FitToCurve = true;
+            attr.IgnorePressure = false;
+            ActiveInkCanvas.InkPresenter.UpdateDefaultDrawingAttributes(attr);
         }
 
         private void CanvasContainer_PointerMoved(object sender, PointerRoutedEventArgs e)
@@ -722,109 +874,15 @@ namespace BlendHub.ReferenceBoard
         }
 
 
-        private Microsoft.UI.Xaml.Shapes.Path ConvertPolylineToPath(Polyline polyline)
+        public Microsoft.UI.Xaml.Shapes.Path ConvertPolylineToPath(Polyline polyline)
         {
             if (polyline.Points.Count < 2)
                 return new Microsoft.UI.Xaml.Shapes.Path();
 
-            // FILTER SMALL MOVEMENTS
-            List<Point> filteredPoints = new List<Point>();
-
-            const double MIN_DISTANCE = 3.0;
-
-            filteredPoints.Add(polyline.Points[0]);
-
-            for (int i = 1; i < polyline.Points.Count; i++)
-            {
-                Point last = filteredPoints[filteredPoints.Count - 1];
-                Point current = polyline.Points[i];
-
-                double dx = current.X - last.X;
-                double dy = current.Y - last.Y;
-
-                double distance = Math.Sqrt(dx * dx + dy * dy);
-
-                // Only add point if movement is large enough
-                if (distance >= MIN_DISTANCE)
-                {
-                    filteredPoints.Add(current);
-                }
-            }
-
-            // If filtering removed too many points
-            if (filteredPoints.Count < 2)
-                return new Microsoft.UI.Xaml.Shapes.Path();
-
-            // -----------------------------------------
-            // CALCULATE BOUNDS
-            // -----------------------------------------
-
-            double minX = double.MaxValue;
-            double minY = double.MaxValue;
-            double maxX = double.MinValue;
-            double maxY = double.MinValue;
-
-            foreach (var p in filteredPoints)
-            {
-                minX = Math.Min(minX, p.X);
-                minY = Math.Min(minY, p.Y);
-                maxX = Math.Max(maxX, p.X);
-                maxY = Math.Max(maxY, p.Y);
-            }
-
-            double padding = polyline.StrokeThickness / 2 + 5;
-
-            double px = minX - padding;
-            double py = minY - padding;
-
-            // -----------------------------------------
-            // CREATE GEOMETRY
-            // -----------------------------------------
-
-            var geometry = new PathGeometry();
-
-            var figure = new PathFigure
-            {
-                StartPoint = new Point(
-                    filteredPoints[0].X - px,
-                    filteredPoints[0].Y - py
-                ),
-                IsClosed = false
-            };
-
-            for (int i = 1; i < filteredPoints.Count; i++)
-            {
-                figure.Segments.Add(new LineSegment
-                {
-                    Point = new Point(
-                        filteredPoints[i].X - px,
-                        filteredPoints[i].Y - py
-                    )
-                });
-            }
-
-            geometry.Figures.Add(figure);
-
-            // CREATE PATH
-            var path = new Microsoft.UI.Xaml.Shapes.Path
-            {
-                Data = geometry,
-                Stroke = polyline.Stroke,
-                StrokeThickness = polyline.StrokeThickness,
-
-                // Make lines visually smoother
-                StrokeLineJoin = PenLineJoin.Round,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round,
-
-                Opacity = polyline.Opacity,
-                Stretch = Stretch.None
-            };
-
-            Canvas.SetLeft(path, px);
-            Canvas.SetTop(path, py);
-
-            return path;
+            var color = (polyline.Stroke as SolidColorBrush)?.Color ?? Microsoft.UI.Colors.Red;
+            var points = polyline.Points.ToList();
+            var path = ConvertCanvasPointsToPath(points, color, polyline.StrokeThickness);
+            return path ?? new Microsoft.UI.Xaml.Shapes.Path();
         }
         private void Canvas_DragOver(object sender, DragEventArgs e)
         {

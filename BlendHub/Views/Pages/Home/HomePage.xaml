@@ -39,7 +39,9 @@
         </DataTemplate>
     </Page.Resources>
 
-    <Grid>
+    <Grid x:Name="RootGrid"
+          AllowDrop="True"
+          DragOver="RootGrid_DragOver">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -112,29 +114,97 @@
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="services:BlenderVersionInfo">
                                     <StackPanel>
-                                        <Grid ColumnDefinitions="Auto, *, Auto" Padding="16,16,16,16">
+                                        <Grid ColumnDefinitions="Auto, *, Auto" Padding="16,14,16,14">
                                             <!-- Column 0: Logo -->
                                             <Image Grid.Column="0" Source="/Assets/blender_logo.png" Width="24" Height="24" Margin="0,0,16,0" VerticalAlignment="Center" />
 
                                             <!-- Column 1: Info -->
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-                                                <TextBlock Text="{x:Bind DisplayName}" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
-                                                <TextBlock Text="{x:Bind ExecutablePath}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <TextBlock Text="{x:Bind DisplayName}" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                                                    <!-- Warning pill if path not available -->
+                                                    <Border Visibility="{x:Bind IsPathMissing, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                            Background="#33FFB900" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                                        <TextBlock Text="Executable Missing" FontSize="11" Foreground="#FFFFB900" FontWeight="SemiBold"/>
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <!-- Path when available -->
+                                                <TextBlock Text="{x:Bind ExecutablePath}"
+                                                           Visibility="{x:Bind HasExecutable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           TextTrimming="CharacterEllipsis" />
+
+                                                <!-- Helper message when path is not linked -->
+                                                <TextBlock Text="No blender.exe linked for this version profile."
+                                                           Visibility="{x:Bind IsPathMissing, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                                             </StackPanel>
 
                                             <!-- Column 2: Actions -->
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                <!-- Launch Button with icon -->
-                                                <Button Click="OpenVersion_Click" Style="{StaticResource DefaultButtonStyle}" Padding="12,4" Height="32" AutomationProperties.AutomationId="BtnLaunchVersion" AutomationProperties.Name="Launch">
+                                                <!-- Launch Button (When Executable is present) -->
+                                                <Button Click="OpenVersion_Click"
+                                                        Visibility="{x:Bind HasExecutable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                        Style="{StaticResource DefaultButtonStyle}"
+                                                        Padding="12,4" Height="32"
+                                                        AutomationProperties.AutomationId="BtnLaunchVersion"
+                                                        AutomationProperties.Name="Launch">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                                         <FontIcon Glyph="&#xE8A7;" FontSize="14" />
                                                         <TextBlock Text="Launch" Style="{StaticResource BodyTextBlockStyle}" />
                                                     </StackPanel>
                                                 </Button>
 
-                                                <!-- Open Config Folder Button -->
-                                                <Button Click="OpenConfigFolder_Click" Style="{StaticResource DefaultButtonStyle}" Width="32" Height="32" Padding="0" ToolTipService.ToolTip="Open Config Folder" AutomationProperties.AutomationId="BtnOpenConfigFolder" AutomationProperties.Name="Open Config Folder">
-                                                    <FontIcon Glyph="&#xEC25;" FontSize="14" />
+                                                <!-- Quick Locate Executable Button when path is missing -->
+                                                <Button Click="LocateExecutable_Click"
+                                                        Visibility="{x:Bind IsPathMissing, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                        Style="{StaticResource AccentButtonStyle}"
+                                                        Padding="12,4" Height="32"
+                                                        ToolTipService.ToolTip="Select the blender.exe file for this version"
+                                                        AutomationProperties.AutomationId="BtnLocateExecutable"
+                                                        AutomationProperties.Name="Locate Executable">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <FontIcon Glyph="&#xE8B7;" FontSize="14" />
+                                                        <TextBlock Text="Locate Executable" Style="{StaticResource BodyTextBlockStyle}" />
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <!-- More Actions Dropdown Menu (&#xE712;) -->
+                                                <Button Style="{StaticResource SubtleButtonStyle}"
+                                                        Width="32" Height="32" Padding="0"
+                                                        ToolTipService.ToolTip="More options"
+                                                        AutomationProperties.AutomationId="BtnMoreVersionOptions"
+                                                        AutomationProperties.Name="More options">
+                                                    <FontIcon Glyph="&#xE712;" FontSize="14" />
+                                                    <Button.Flyout>
+                                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                            <MenuFlyoutItem Text="Locate Executable"
+                                                                            Click="LocateExecutable_Click"
+                                                                            Tag="{x:Bind}">
+                                                                <MenuFlyoutItem.Icon>
+                                                                    <FontIcon Glyph="&#xE8B7;" />
+                                                                </MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Open Config Folder"
+                                                                            Click="OpenConfigFolder_Click"
+                                                                            Tag="{x:Bind}">
+                                                                <MenuFlyoutItem.Icon>
+                                                                    <FontIcon Glyph="&#xE8DA;" />
+                                                                </MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutSeparator />
+                                                            <MenuFlyoutItem Text="Remove from list"
+                                                                            Click="RemoveVersion_Click"
+                                                                            Tag="{x:Bind}">
+                                                                <MenuFlyoutItem.Icon>
+                                                                    <FontIcon Glyph="&#xE74D;" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                                                </MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                        </MenuFlyout>
+                                                    </Button.Flyout>
                                                 </Button>
                                             </StackPanel>
                                         </Grid>
@@ -159,12 +229,20 @@
                 <StackPanel Spacing="16" Margin="0,0,0,16">
                     <Grid ColumnDefinitions="*, Auto">
                         <TextBlock Text="Recent Projects" Style="{StaticResource BodyLargeStrongTextBlockStyle}" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" />
-                        <Button Grid.Column="1" Click="ViewAllProjects_Click" Style="{StaticResource SubtleButtonStyle}" ToolTipService.ToolTip="View All Projects" AutomationProperties.AutomationId="BtnViewAllProjects" AutomationProperties.Name="View All Projects">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="View All" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
-                                <FontIcon Glyph="&#xE72A;" FontSize="12" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Button>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <Button Click="OpenBlendFile_Click" Style="{StaticResource SubtleButtonStyle}" ToolTipService.ToolTip="Open an existing .blend file or project folder" AutomationProperties.AutomationId="BtnImportProject">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE8E5;" FontSize="12" VerticalAlignment="Center" />
+                                    <TextBlock Text="Open .blend" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Click="ViewAllProjects_Click" Style="{StaticResource SubtleButtonStyle}" ToolTipService.ToolTip="View All Projects" AutomationProperties.AutomationId="BtnViewAllProjects" AutomationProperties.Name="View All Projects">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="View All" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                                    <FontIcon Glyph="&#xE72A;" FontSize="12" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
                     </Grid>
 
                     <ListView x:Name="RecentProjectsList" ItemsSource="{x:Bind RecentProjects, Mode=OneWay}" SelectionMode="None" HorizontalAlignment="Stretch" AutomationProperties.AutomationId="ListRecentProjects" AutomationProperties.Name="Recent Projects">
@@ -183,17 +261,54 @@
                         </ListView.ItemTemplate>
                     </ListView>
 
-                    <!-- Empty state for recent projects -->
-                    <Grid x:Name="NoRecentProjectsPanel" MinHeight="180" Padding="24,32" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Visibility="Collapsed">
+                    <!-- Enhanced Empty State for Recent Projects -->
+                    <Grid x:Name="NoRecentProjectsPanel" MinHeight="190" Padding="32,28" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Visibility="Collapsed">
                         <StackPanel Spacing="16" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <FontIcon Glyph="&#xE7C3;" FontSize="36" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                            <TextBlock Text="No recent projects" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextAlignment="Center" />
-                            <TextBlock Text="Create or import a Blender project to see it here." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" Margin="0,-8,0,0" />
-                            <Button Content="Create Project" Style="{StaticResource AccentButtonStyle}" Click="ViewAllProjects_Click" HorizontalAlignment="Center" Margin="0,8,0,0" AutomationProperties.AutomationId="BtnCreateProjectEmpty" />
+                            <Grid Width="48" Height="48" HorizontalAlignment="Center">
+                                <Border CornerRadius="24" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.12" />
+                                <FontIcon Glyph="&#xE7C3;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Grid>
+                            <StackPanel Spacing="4" HorizontalAlignment="Center">
+                                <TextBlock Text="No recent projects yet" Style="{StaticResource BodyStrongTextBlockStyle}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextAlignment="Center" />
+                                <TextBlock Text="Get started by creating a structured project workspace, opening a .blend file, or dropping a project folder anywhere." Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextAlignment="Center" MaxWidth="440" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" Margin="0,4,0,0">
+                                <Button Content="Create Project" Style="{StaticResource AccentButtonStyle}" Click="CreateProject_Click" Padding="16,6" AutomationProperties.AutomationId="BtnCreateProjectEmpty" />
+                                <Button Content="Open Existing (.blend)" Style="{StaticResource DefaultButtonStyle}" Click="OpenBlendFile_Click" Padding="16,6" AutomationProperties.AutomationId="BtnOpenBlendEmpty" />
+                            </StackPanel>
                         </StackPanel>
                     </Grid>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Full-Page Drag Overlay -->
+        <Grid x:Name="DragOverlay"
+              Grid.RowSpan="2"
+              Background="{ThemeResource ControlAltFillColorSecondaryBrush}"
+              Visibility="Collapsed"
+              Canvas.ZIndex="100"
+              AllowDrop="True"
+              DragOver="DragOverlay_DragOver"
+              DragLeave="DragOverlay_DragLeave"
+              Drop="DragOverlay_Drop">
+            <Grid Margin="24">
+                <Rectangle Stroke="{ThemeResource AccentFillColorDefaultBrush}"
+                           StrokeThickness="2"
+                           StrokeDashArray="3,3"
+                           RadiusX="8"
+                           RadiusY="8"
+                           Fill="Transparent"
+                           Margin="0"/>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                    <FontIcon Glyph="&#xE8E5;" FontSize="48" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                    <TextBlock Text="Drop Blender project folder to import"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
     </Grid>
 </Page>
